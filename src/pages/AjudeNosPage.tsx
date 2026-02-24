@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import VakinhaHeader from "../components/VakinhaHeader";
 
 const AjudeNosPage = () => {
+  const navigate = useNavigate();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(50);
   const [customAmount, setCustomAmount] = useState("50");
   const [expanded, setExpanded] = useState(false);
@@ -32,11 +34,7 @@ const AjudeNosPage = () => {
       showToastMsg("⚠️ Escolha ou digite um valor");
       return;
     }
-    alert(
-      `Obrigado(a) por querer ajudar com R$ ${amount
-        .toFixed(2)
-        .replace(".", ",")}! Use a chave Pix abaixo para concluir sua doação. 💚`
-    );
+    navigate(`/pagamentos?valor=${amount.toFixed(2)}`);
   };
 
   const shortText =
