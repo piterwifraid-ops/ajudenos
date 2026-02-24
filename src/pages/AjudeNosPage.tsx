@@ -5,6 +5,7 @@ const AjudeNosPage = () => {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(50);
   const [customAmount, setCustomAmount] = useState("50");
   const [expanded, setExpanded] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [toast, setToast] = useState("");
   const [showToast, setShowToast] = useState(false);
 
@@ -264,7 +265,7 @@ const AjudeNosPage = () => {
             onClick={handleDonate}
             style={{
               width: "100%",
-              background: "linear-gradient(135deg, #f97316, #ea580c)",
+              background: "linear-gradient(135deg, #24ca68, #1aaa54)",
               color: "white",
               border: "none",
               borderRadius: 14,
@@ -274,7 +275,7 @@ const AjudeNosPage = () => {
               fontFamily: "DM Sans, sans-serif",
               cursor: "pointer",
               letterSpacing: "0.01em",
-              boxShadow: "0 6px 20px rgba(234,88,12,0.35)",
+              boxShadow: "0 6px 20px rgba(36,202,104,0.35)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -287,22 +288,91 @@ const AjudeNosPage = () => {
             Quero ajudar agora
           </button>
 
-          {/* Security notice */}
-          <div
-            style={{
-              textAlign: "center",
-              marginTop: 12,
-              fontSize: 12,
-              color: "#9ca3af",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 5,
-            }}
-          >
-            <span>🔒</span>
-            <span>Doação 100% segura e protegida</span>
+        </div>
+
+        {/* PIX + Story section */}
+        <div style={{ marginTop: 28 }}>
+          {/* Creation date */}
+          <div style={{ fontSize: 14, color: "#374151", marginBottom: 16 }}>
+            <strong>Vaquinha criada em:</strong> 24/02/2026
           </div>
+
+          {/* Full story */}
+          <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.75 }}>
+            <p style={{ marginBottom: 12 }}>Amigos, familiares e todos aqueles que têm um coração solidário.</p>
+            <p style={{ marginBottom: 12 }}>Venho hoje pedir <strong>ajuda em um momento de extrema dor e necessidade.</strong></p>
+            <p style={{ marginBottom: 12 }}>Minha mãe, Adair Ribeiro, uma senhora de 78 anos, frágil e debilitada de saúde, havia acabado de receber alta hospitalar no dia 23 de fevereiro. Mas, no dia seguinte, 24 de fevereiro, uma forte chuva em Ubá, Minas Gerais, transformou nossa vida em um pesadelo: a casa dela e de minha irmã, que cuida dela diariamente, foi completamente alagada até o teto.</p>
+            <p style={{ marginBottom: 12 }}>Não sobrou nada. Todos os móveis, eletrodomésticos, documentos e lembranças foram levados pela água e pelo barro. Minha mãe, já tão vulnerável, agora enfrenta não apenas sua saúde frágil, mas também a dor de ver seu lar destruído. Minha irmã e seu esposo estão desolados, sem saber por onde começar, sem forças diante de tamanha tragédia.</p>
+            <p style={{ marginBottom: 12 }}>É difícil descrever a sensação de impotência ao ver tudo perdido em questão de horas. Por isso, peço encarecidamente: quem puder doar qualquer quantia, estará oferecendo não apenas ajuda material, mas também esperança e alívio em um momento tão devastador.</p>
+            <p style={{ marginBottom: 12 }}>Cada contribuição, por menor que seja, fará diferença para que possamos reconstruir o mínimo necessário e devolver dignidade à minha mãe. Deixo aqui as fotos do alagamento para que todos possam ver a gravidade da situação.</p>
+            <p style={{ marginBottom: 0 }}><strong>Por favor, ajudem-nos a recomeçar. 🙏</strong></p>
+          </div>
+        </div>
+
+        {/* FAQ Accordion */}
+        <div style={{ marginTop: 32 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 20 }}>
+            Tudo o que você precisa saber sobre o Vakinha
+          </div>
+          {([
+            {
+              q: "Como ajudar Léia Ribeiro ?",
+              a: (<>Fazendo uma doação diretamente pelo Vakinha.com.br.<br />Compartilhando a vaquinha nas suas redes sociais.<br />Divulgando para amigos e familiares que possam se sensibilizar com a causa.<br />Doando via PIX 5965893@vakinha.com.br.</>)
+            },
+            {
+              q: "Quando a vaquinha foi criada?",
+              a: "A vaquinha Minha mãe e irmã perderam tudo na enchente – precisamos de vocês foi criada em 24/02/2026."
+            },
+            {
+              q: "Qual a meta da vaquinha Minha mãe e irmã perderam tudo na enchente – precisamos de vocês?",
+              a: "Meta: R$ 50.000,00."
+            },
+            {
+              q: "Como posso ajudar via chave PIX?",
+              a: (<>Chave PIX: 5965893@vakinha.com.br.<br />Tipo de chave: E-mail.<br />Importante: Ao fazer uma doação via PIX, entre em contato com o criador da vaquinha para informar sobre a doação, assim podemos agradecer e manter o controle das contribuições.</>)
+            },
+            {
+              q: "Quanto a vaquinha já arrecadou?",
+              a: (<>Valor arrecadado: R$ 570,00.<br />Percentual da meta: 1%.<br />Número de doadores: 11.<br />Última atualização: 24/02/2026.</>)
+            },
+          ] as { q: string; a: React.ReactNode }[]).map((item, i) => (
+            <div
+              key={i}
+              style={{ borderBottom: "1px solid #f0f0f0" }}
+            >
+              <button
+                onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                style={{
+                  width: "100%",
+                  background: "none",
+                  border: "none",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "16px 0",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  fontFamily: "DM Sans, sans-serif",
+                }}
+              >
+                <span style={{ fontSize: 15, fontWeight: 600, color: "#111827", paddingRight: 12 }}>{item.q}</span>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="#6b7280"
+                  style={{ flexShrink: 0, transform: openFaq === i ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+                >
+                  <path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z" />
+                </svg>
+              </button>
+              {openFaq === i && (
+                <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.7, paddingBottom: 16 }}>
+                  {item.a}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -327,6 +397,60 @@ const AjudeNosPage = () => {
         }}
       >
         {toast}
+      </div>
+
+      {/* Bottom buttons */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          padding: "24px 20px 40px",
+          boxSizing: "border-box",
+        }}
+      >
+        <button
+          onClick={handleDonate}
+          style={{
+            flex: 1,
+            background: "linear-gradient(135deg, #24ca68, #1aaa54)",
+            color: "white",
+            border: "none",
+            borderRadius: 12,
+            padding: "14px",
+            fontSize: 15,
+            fontWeight: 700,
+            fontFamily: "DM Sans, sans-serif",
+            cursor: "pointer",
+            boxShadow: "0 4px 14px rgba(36,202,104,0.3)",
+          }}
+        >
+          Quero Ajudar
+        </button>
+        <button
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({ title: "Minha casa foi alagada", url: window.location.href });
+            } else {
+              navigator.clipboard.writeText(window.location.href);
+              showToastMsg("🔗 Link copiado!");
+            }
+          }}
+          style={{
+            flex: 1,
+            background: "white",
+            color: "#374151",
+            border: "1.5px solid #d1d5db",
+            borderRadius: 12,
+            padding: "14px",
+            fontSize: 15,
+            fontWeight: 700,
+            fontFamily: "DM Sans, sans-serif",
+            cursor: "pointer",
+          }}
+        >
+          Compartilhar
+        </button>
       </div>
     </div>
   );
