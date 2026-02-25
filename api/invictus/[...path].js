@@ -16,11 +16,16 @@ export default async function handler(req, res) {
   delete query.path;
   const queryString = new URLSearchParams(query).toString();
 
-  const targetUrl = `https://api.invictuspay.app.br/api/public/v1/${pathStr}${queryString ? "?" + queryString : ""}`;
+  const SECRET_KEY = "sk_live_dqsFdUZ8AWn8m2vWxAgImUZQsXvDoEv8i94xoI7MwcyHykIX";
+  const COMPANY_ID = "52bef000-0bb0-42b2-a455-793dc0bd95f4";
+  const credentials = Buffer.from(`${SECRET_KEY}:${COMPANY_ID}`).toString("base64");
+
+  const targetUrl = `https://api.bancobabylon.com/functions/v1/${pathStr}${queryString ? "?" + queryString : ""}`;
 
   const fetchOptions = {
     method: req.method,
     headers: {
+      "Authorization": `Basic ${credentials}`,
       "Content-Type": "application/json",
       Accept: "application/json",
     },

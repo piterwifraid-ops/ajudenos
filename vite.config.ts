@@ -4,12 +4,13 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-const INVICTUS_API_TOKEN = "TuvHpzBUr15I6Vd47MpA9Ukg8NbCZngMU5hqS2d7InPrwyF84R8zwpauaSBr";
-const INVICTUS_BASE = "https://api.invictuspay.app.br/api/public/v1";
+const BABYLON_SECRET_KEY = "sk_live_dqsFdUZ8AWn8m2vWxAgImUZQsXvDoEv8i94xoI7MwcyHykIX";
+const BABYLON_COMPANY_ID = "52bef000-0bb0-42b2-a455-793dc0bd95f4";
+const BABYLON_BASE = "https://api.bancobabylon.com/functions/v1";
 
-function invictusUrl(path: string) {
-  const sep = path.includes("?") ? "&" : "?";
-  return `${INVICTUS_BASE}${path}${sep}api_token=${INVICTUS_API_TOKEN}`;
+function babylonAuthHeader() {
+  const credentials = Buffer.from(`${BABYLON_SECRET_KEY}:${BABYLON_COMPANY_ID}`).toString("base64");
+  return `Basic ${credentials}`;
 }
 
 async function readBody(req: IncomingMessage): Promise<string> {
@@ -23,49 +24,65 @@ async function readBody(req: IncomingMessage): Promise<string> {
 
 async function localTransactionsHandler(req: IncomingMessage, res: ServerResponse) {
   res.setHeader("Content-Type", "application/json");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  // GET /api/invictus/transactions?id=<uuid> — poll status
+  if (req.method === "GET") {
+    try {
+      const urlObj = new URL(req.url!, "http://localhost");
+      const id = urlObj.searchParams.get("id");
+      if (!id) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "id required" }));
+        return;
+      }
+      const upstream = await fetch(`${BABYLON_BASE}/transactions/${id}`, {
+        headers: {
+          Authorization: babylonAuthHeader(),
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      });
+      const data = await upstream.json();
+      res.writeHead(upstream.status);
+      res.end(JSON.stringify(data));
+    } catch (err) {
+      console.error("[local-api] GET error:", err);
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: "Erro ao consultar transação" }));
+    }
+    return;
+  }
+
+  // POST — create PIX transaction
   try {
     const raw = await readBody(req);
     const { amount, customer } = JSON.parse(raw);
 
-    const productsRes = await fetch(invictusUrl("/products?per_page=1"), {
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-    });
-    const productsData = await productsRes.json();
-    const product = productsData?.data?.[0];
-    if (!product) {
-      res.writeHead(400);
-      res.end(JSON.stringify({ error: "Nenhum produto encontrado na conta InvictusPay." }));
-      return;
-    }
-
-    const offersRes = await fetch(invictusUrl(`/products/${product.hash}/offers?per_page=1`), {
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-    });
-    const offersData = await offersRes.json();
-    const offer = offersData?.data?.[0];
-    const offerHash = offer?.hash ?? product.hash;
-
-    const txRes = await fetch(invictusUrl("/transactions"), {
+    const txRes = await fetch(`${BABYLON_BASE}/transactions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: {
+        Authorization: babylonAuthHeader(),
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
       body: JSON.stringify({
         amount,
-        offer_hash: offerHash,
-        payment_method: "pix",
-        customer,
-        cart: [
+        paymentMethod: "PIX",
+        customer: {
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+          document: customer.document,
+        },
+        items: [
           {
-            product_hash: product.hash,
-            title: product.title ?? "Doação",
-            cover: null,
-            price: amount,
+            title: "Doação",
+            unitPrice: amount,
             quantity: 1,
-            operation_type: 1,
-            tangible: false,
           },
         ],
-        expire_in_days: 1,
-        transaction_origin: "api",
+        description: "Doação via Vakinha",
       }),
     });
 
@@ -95,7 +112,7 @@ export default defineConfig(({ mode }) => ({
       name: "local-invictus-api",
       configureServer(server) {
         server.middlewares.use("/api/invictus/transactions", (req, res, next) => {
-          if (req.method === "POST") {
+          if (req.method === "POST" || req.method === "GET") {
             localTransactionsHandler(req, res);
           } else {
             next();
