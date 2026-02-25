@@ -566,12 +566,12 @@ const AjudeNosPage = () => {
               </span>
             </div>
           </div>
-          <span className="vk-porcentagem">5.47%</span>
+          <span className="vk-porcentagem">73%</span>
           <div className="vk-barra-total">
-            <div className="vk-barra-parcial" style={{ width: "5.47%" }}></div>
+            <div className="vk-barra-parcial" style={{ width: "73%" }}></div>
           </div>
           <div style={{ marginTop: 6 }}>
-            <span className="vk-arrecadado-val">R$ 16.413,815</span>
+            <span className="vk-arrecadado-val">R$ 221.874,60</span>
             <span className="vk-arrecadado-meta"> de R$ 300.000,00</span>
           </div>
         </div>
