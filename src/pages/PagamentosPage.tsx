@@ -40,54 +40,44 @@ function randomCustomer() {
   return {
     name,
     email: randomEmail(name),
-    phone_number: randomPhone(),
+    phone: randomPhone(),
     document: randomCPF(),
   };
 }
 
-// ─── transaction hash extractor ─────────────────────────────────────────────
+// ─── transaction id extractor ────────────────────────────────────────────────
 
 function extractTransactionHash(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
   const obj = data as Record<string, unknown>;
-  // API wraps response in { success, data: { hash, ... } }
+  // Banco BABYLON returns { id: "uuid", ... } at top level
   return (
-    ((obj.data as Record<string, unknown>)?.hash as string) ??
-    ((obj.data as Record<string, unknown>)?.id as string) ??
-    (obj.hash as string) ??
     (obj.id as string) ??
+    ((obj.data as Record<string, unknown>)?.id as string) ??
     null
   );
 }
 
 // ─── pix extractor ───────────────────────────────────────────────────────────
 
-// InvictusPay PIX response shape:
-// { pix: { pix_qr_code: string, qr_code_base64: string|null }, ... }
+// Banco BABYLON PIX response shape:
+// { id, pix: { qrcode: string, expirationDate, end2EndId, receiptUrl }, ... }
 function extractPixData(data: unknown): { qrCode: string; qrCodeImage: string } | null {
   if (!data || typeof data !== "object") return null;
   const obj = data as Record<string, unknown>;
 
-  // Response is returned directly (not wrapped in .data)
   const pix = (obj.pix ?? (obj.data as Record<string, unknown>)?.pix) as Record<string, unknown> | undefined;
 
   const qrCode =
+    (pix?.qrcode as string) ??
     (pix?.pix_qr_code as string) ??
     (pix?.qr_code as string) ??
-    (obj.pix_qr_code as string) ??
-    "";
-
-  const qrCodeImage =
-    (pix?.qr_code_base64 as string) ??
-    (pix?.qr_code_image as string) ??
     "";
 
   if (!qrCode) return null;
 
-  // If no image returned by API, generate via public QR service
-  const imageUrl = qrCodeImage
-    ? `data:image/png;base64,${qrCodeImage}`
-    : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`;
+  // Generate QR image via public service (Babylon doesn’t return base64)
+  const imageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`;
 
   return { qrCode, qrCodeImage: imageUrl };
 }
@@ -263,13 +253,14 @@ const PagamentosPage = () => {
       if (stopped || pollCount >= MAX_POLLS) return;
       pollCount++;
       try {
-        const res = await fetch(`/api/invictus/transactions?hash=${transactionHash}`);
+        const res = await fetch(`/api/invictus/transactions?id=${transactionHash}`);
         if (res.ok) {
           const json = await res.json();
           // API response: { success: true, data: { status: "paid", ... } }
+          // Banco BABYLON returns status at top level
           const status = (
-            (json?.data?.status as string) ??
             (json?.status as string) ??
+            (json?.data?.status as string) ??
             ""
           ).toLowerCase();
           if (PAID_STATUSES.includes(status)) {

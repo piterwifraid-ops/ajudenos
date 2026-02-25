@@ -509,7 +509,7 @@ const AjudeNosPage = () => {
       <div className="vk-container">
         {/* TOP */}
         <div className="vk-topVakinha">
-          <span className="vk-categoria">SAÚDE / TRATAMENTOS</span>
+          <span className="vk-categoria">TRAGÉDIAS / DESASTRES</span>
           <h1>Lama, destruição e hora de recomeço. Ajude famílias de Minas Gerais a recomeçar</h1>
           <span className="vk-id">ID: IKEVW2ZUHYEF</span>
         </div>
@@ -596,17 +596,21 @@ const AjudeNosPage = () => {
           <div className="vk-show-sobre">
             <span className="vk-inicio"><strong>Vaquinha criada em:</strong> 24/02/2026</span>
             <p><strong>✅ Vaquinha Verificada</strong></p>
-            <p><strong>Pela Vida do Padre Lucas Gonçalves</strong></p>
-            <p>Esse é o <strong>Padre Lucas Gonçalves</strong>, pároco da Paróquia Jesus de Nazaré, no Distrito Federal. Ele trava, há alguns anos, uma dura batalha contra um <strong>linfoma de Hodgkin</strong>, uma forma agressiva e <strong>refratária aos tratamentos convencionais.</strong></p>
-            <p>Hoje, a única alternativa que tem apresentado resultados é uma forma específica de <strong>imunoterapia</strong>, um tratamento inovador, mas ainda não aprovado nem coberto pelos planos de saúde ou pelo SUS.</p>
-            <p>Além da gravidade da doença, o Padre Lucas enfrenta intercorrências raríssimas entre os pacientes com esse tipo de câncer, o que agrava ainda mais seu estado de saúde. Surgiram nódulos nos pulmões, no mediastino e até nos pés, exigindo novos exames, cirurgias e procedimentos delicados.</p>
-            <p>Tudo nessa caminhada tem sido profundamente desafiador — espiritual, emocional e financeiro. Os custos são altíssimos, pois o único tratamento eficaz ainda não é disponibilizado pelo Sistema Único de Saúde.</p>
-            <p><strong>Todos os meses</strong>, o Pe. Lucas precisa se deslocar até São Paulo para realizar a imunoterapia.</p>
-            <p><strong>Semanalmente</strong>, recebe medicação especial para os pulmões — um dos órgãos mais afetados pelo linfoma.</p>
-            <p>E, com frequência, necessita de <strong>intervenções médicas inesperadas</strong>, em razão das reações do organismo ou das alterações em seus exames.</p>
-            <p>Por tudo isso, <strong>viemos mais uma vez pedir a sua ajuda</strong>, por amor à vida do nosso querido <strong>Padre Lucas Gonçalves</strong>. Ele que, mesmo em meio à dor, <strong>permanece firme no altar</strong>, unindo seus sofrimentos aos do Cristo crucificado, <strong>convertendo corações e reacendendo a fé</strong> por meio do seu testemunho silencioso e poderoso.</p>
-            <p>Cada contribuição — por menor que pareça — é um gesto concreto de amor, esperança e fé. Cada centavo doado é um <strong>passo a mais nessa luta pela vida</strong>.</p>
-            <p><em>"Os hospitais são os nossos jardins e as nossas missões. Os doentes são a pupila e o rosto de Deus." — São Camilo de Lellis</em></p>
+            <p><strong>Ajude famílias de Minas Gerais a recomeçar</strong></p>
+            <p>As chuvas que atingiram <strong>Minas Gerais em fevereiro de 2026</strong> foram devastadoras. Em questão de horas, famílias inteiras viram tudo que construíram a vida inteira ser levado pela enchente. Casa, móveis, documentos, roupas — <strong>tudo embaixo da lama.</strong></p>
+            <p>Tem criança que dormiu no chão frio. Tem idoso que perdeu os remédios. Tem mãe que ficou sem fraldas pro bebê. Gente que não tem pra onde ir, sem ter o que comer, <strong>esperando uma ajuda que demora a chegar.</strong></p>
+            <p>Não é notícia de TV não. É a <strong>realidade de milhares de famílias mineiras agora</strong>, nesse momento, enquanto você lê isso aqui.</p>
+            <p><strong>Bairros inteiros submersos. Estradas cortadas. Pontes destruídas.</strong> Famílias ilhadas sem acesso a água potável, comida ou abrigo. O Corpo de Bombeiros trabalhando sem parar, mas a <strong>dimensão da tragédia é grande demais</strong> pra poucos conseguirem resolver.</p>
+            <p>O que a gente tá pedindo não é muito. Com pouquinho de cada um, a gente consegue:</p>
+            <p><strong>Cestas básicas</strong> pra quem tá sem comer</p>
+            <p><strong>Água potável e kits de higiene</strong> pra quem tá sem nada</p>
+            <p><strong>Colchões e cobertores</strong> pra quem tá dormindo no chão</p>
+            <p><strong>Fraldas, leite e roupas</strong> pra crianças e bebês</p>
+            <p><strong>Material de limpeza</strong> pra ajudar quem começar a reconstruir</p>
+            <p>Cada real doado vai <strong>direto pra compra de itens de emergência</strong> e entrega nas comunidades mais afetadas. Sem enrolação, sem burocracia, sem desvio. <strong>Povo ajudando povo</strong>, do jeito que o brasileiro sabe fazer.</p>
+            <p>Se você tem condição de ajudar, <strong>não deixa pra depois</strong>. Esses vizinhos nossos precisam agora. Não semana que vem. <strong>Agora.</strong></p>
+            <p>Compartilha também. Um compartilhamento seu pode chegar em alguém que vai querer ajudar. <strong>Juntos a gente chega lá.</strong></p>
+            <p><em>"A solidariedade começa quando a gente para de olhar e começa a agir."</em></p>
             <button className="vk-btn-ajudar" onClick={() => setShowModal(true)}>Quero Ajudar</button>
           </div>
         )}
