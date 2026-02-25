@@ -38,10 +38,10 @@ const AjudeNosPage = () => {
   };
 
   const shortText =
-    "Amigos, familiares e todos aqueles que têm um coração solidário. Venho hoje pedir ajuda em um momento de extrema dor e necessidade. Uma forte chuva alagou minha casa completamente e não sobrou nada...";
+    "AJUDE JOSÉ GERALDO (LORINHO) E MARIA DAS GRAÇAS (GRACINHA) A RECOMEÇAR – ENCHENTE EM UBÁ/MG";
 
   const fullText =
-    "Amigos, familiares e todos aqueles que têm um coração solidário. Venho hoje pedir ajuda em um momento de extrema dor e necessidade. Uma forte chuva alagou minha casa completamente. Móveis, eletrodomésticos, documentos e todas as minhas lembranças foram levados pela água e pelo barro. Não sobrou nada. É difícil descrever a sensação de ver tudo que você construiu desaparecer em questão de horas. Estou sem saber por onde começar, sem forças diante de tamanha tragédia. Cada contribuição, por menor que seja, vai me ajudar a reconstruir o essencial e recuperar a dignidade de ter um lar. Por favor, me ajudem a recomeçar. 🙏";
+    "Meus avós, José Geraldo (conhecido como Lorinho) e Maria das Graças (Gracinha), foram gravemente afetados pela enchente que atingiu a cidade de Ubá. A água invadiu a casa e inundou tudo. Móveis, eletrodomésticos, roupas, alimentos e pertences pessoais foram perdidos. Eles ficaram apenas com a roupa do corpo.";
 
   const amounts = [10, 25, 50, 100];
 
@@ -61,7 +61,7 @@ const AjudeNosPage = () => {
       {/* Photo area */}
       <div style={{ position: "relative" }}>
         <img
-          src="https://static.vakinha.com.br/uploads/vakinha/image/5965893/1771940560.014.jpg?ims=700x410"
+          src="https://static.vakinha.com.br/uploads/vakinha/image/5965638/1771932148.364.jpg?ims=700x410"
           alt="Foto da enchente"
           style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }}
         />
@@ -115,7 +115,7 @@ const AjudeNosPage = () => {
             color: "#111827",
           }}
         >
-          Minha casa foi completamente alagada — preciso de ajuda para recomeçar
+          AJUDE JOSÉ GERALDO (LORINHO) E MARIA DAS GRAÇAS (GRACINHA) A RECOMEÇAR – ENCHENTE EM UBÁ/MG
         </h1>
 
         {/* ID */}
@@ -297,13 +297,21 @@ const AjudeNosPage = () => {
 
           {/* Full story */}
           <div style={{ fontSize: 14, color: "#374151", lineHeight: 1.75 }}>
-            <p style={{ marginBottom: 12 }}>Amigos, familiares e todos aqueles que têm um coração solidário.</p>
-            <p style={{ marginBottom: 12 }}>Venho hoje pedir <strong>ajuda em um momento de extrema dor e necessidade.</strong></p>
-            <p style={{ marginBottom: 12 }}>Minha mãe, Adair Ribeiro, uma senhora de 78 anos, frágil e debilitada de saúde, havia acabado de receber alta hospitalar no dia 23 de fevereiro. Mas, no dia seguinte, 24 de fevereiro, uma forte chuva em Ubá, Minas Gerais, transformou nossa vida em um pesadelo: a casa dela e de minha irmã, que cuida dela diariamente, foi completamente alagada até o teto.</p>
-            <p style={{ marginBottom: 12 }}>Não sobrou nada. Todos os móveis, eletrodomésticos, documentos e lembranças foram levados pela água e pelo barro. Minha mãe, já tão vulnerável, agora enfrenta não apenas sua saúde frágil, mas também a dor de ver seu lar destruído. Minha irmã e seu esposo estão desolados, sem saber por onde começar, sem forças diante de tamanha tragédia.</p>
-            <p style={{ marginBottom: 12 }}>É difícil descrever a sensação de impotência ao ver tudo perdido em questão de horas. Por isso, peço encarecidamente: quem puder doar qualquer quantia, estará oferecendo não apenas ajuda material, mas também esperança e alívio em um momento tão devastador.</p>
-            <p style={{ marginBottom: 12 }}>Cada contribuição, por menor que seja, fará diferença para que possamos reconstruir o mínimo necessário e devolver dignidade à minha mãe. Deixo aqui as fotos do alagamento para que todos possam ver a gravidade da situação.</p>
-            <p style={{ marginBottom: 0 }}><strong>Por favor, ajudem-nos a recomeçar. 🙏</strong></p>
+            <p style={{ marginBottom: 12 }}>Meus avós, <strong>José Geraldo (conhecido como Lorinho) e Maria das Graças (Gracinha)</strong>, foram gravemente afetados pela enchente que atingiu a cidade de Ubá.</p>
+            <p style={{ marginBottom: 12 }}>A água invadiu a casa e inundou tudo. Móveis, eletrodomésticos, roupas, alimentos e pertences pessoais foram perdidos. Eles ficaram apenas com a roupa do corpo.</p>
+            <p style={{ marginBottom: 12 }}>Meu avô está em <strong>tratamento oncológico</strong> e precisa de medicação contínua. Minha avó é diagnosticada com <strong>Alzheimer e demência</strong>, também dependendo de remédios diários. No momento, eles estão sem as medicações e sem condições financeiras para repor o básico.</p>
+            <p style={{ marginBottom: 12 }}>Graças a Deus, estão em segurança, acolhidos provisoriamente na casa de uma tia. Mas precisam urgentemente de ajuda para recomeçar — começando pelo essencial:</p>
+            <ul style={{ paddingLeft: 20, marginBottom: 12 }}>
+              <li>Compra das medicações</li>
+              <li>Roupas</li>
+              <li>Itens de higiene</li>
+              <li>Alimentação</li>
+              <li>Móveis e utensílios básicos</li>
+            </ul>
+            <p style={{ marginBottom: 12 }}>Qualquer valor faz diferença. Se você não puder contribuir financeiramente, pedimos que <strong>compartilhe esta vaquinha</strong> para que ela alcance mais pessoas.</p>
+            <p style={{ marginBottom: 12 }}>Estamos buscando apoio para devolver dignidade, cuidado e esperança a quem sempre cuidou de toda a família.</p>
+            <p style={{ marginBottom: 12 }}><strong>Doações físicas:</strong><br />Contato: 32 99856-3891 (Eduarda)<br />Endereço: Rua Ary Martins da Silva, nº 82, bairro Santo Antônio (ap 103) — Ubá/MG</p>
+            <p style={{ marginBottom: 0 }}><strong>Que Deus abençoe cada gesto de solidariedade. 🙏</strong></p>
           </div>
         </div>
 
