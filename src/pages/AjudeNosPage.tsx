@@ -61,7 +61,7 @@ const AjudeNosPage = () => {
       {/* Photo area */}
       <div style={{ position: "relative" }}>
         <img
-          src="https://static.vakinha.com.br/uploads/vakinha/image/5965893/1771940560.014.jpg?ims=700x410"
+          src="https://static.vakinha.com.br/uploads/vakinha/image/5965638/1771932148.364.jpg?ims=700x410"
           alt="Foto da enchente"
           style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }}
         />
@@ -455,3 +455,4 @@ const AjudeNosPage = () => {
 };
 
 export default AjudeNosPage;
+
