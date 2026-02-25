@@ -142,6 +142,18 @@ const s = {
   } as React.CSSProperties,
 };
 
+// ─── Facebook Pixel ─────────────────────────────────────────────────────────
+
+// Fire Facebook Pixel Purchase when payment is confirmed
+function firePurchase(value: number) {
+  if (typeof window !== "undefined" && typeof (window as any).fbq === "function") {
+    (window as any).fbq("trackSingle", "1488460169954912", "Purchase", {
+      value,
+      currency: "BRL",
+    });
+  }
+}
+
 // ─── component ───────────────────────────────────────────────────────────────
 
 type Step = "loading" | "pix" | "paid" | "error";
@@ -464,7 +476,7 @@ const PagamentosPage = () => {
       {/* Confirm paid */}
       <div style={{ ...s.card, textAlign: "center" }}>
         <button
-          onClick={() => setStep("paid")}
+          onClick={() => { firePurchase(amount); setStep("paid"); }}
           style={{
             background: "none",
             border: "2px solid #24ca68",
