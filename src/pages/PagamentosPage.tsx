@@ -2,24 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import VakinhaHeader from "../components/VakinhaHeader";
 
-
-// Fire Facebook Pixel InitiateCheckout on mount
-function fireInitiateCheckout() {
-  if (typeof window !== "undefined" && typeof (window as any).fbq === "function") {
-    (window as any).fbq("trackSingle", "1488460169954912", "InitiateCheckout");
-  }
-}
-
-// Fire Facebook Pixel Purchase when payment is confirmed
-function firePurchase(value: number) {
-  if (typeof window !== "undefined" && typeof (window as any).fbq === "function") {
-    (window as any).fbq("trackSingle", "1488460169954912", "Purchase", {
-      value,
-      currency: "BRL",
-    });
-  }
-}
-
 // ─── random data generators ──────────────────────────────────────────────────
 
 function randomCPF(): string {
@@ -177,18 +159,6 @@ const PagamentosPage = () => {
   const [pixQrCodeImage, setPixQrCodeImage] = useState("");
   const [apiError, setApiError] = useState("");
   const [copied, setCopied] = useState(false);
-
-  // Track InitiateCheckout on pixel 1488460169954912 when user reaches payment page
-  useEffect(() => {
-    fireInitiateCheckout();
-  }, []);
-
-  // Track Purchase when user confirms payment
-  useEffect(() => {
-    if (step === "paid") {
-      firePurchase(amount);
-    }
-  }, [step]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).catch(() => {
