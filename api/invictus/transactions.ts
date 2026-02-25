@@ -34,12 +34,27 @@ async function readBody(req: IncomingMessage): Promise<string> {
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  // GET /api/invictus/transactions?hash=<hash> — poll transaction status
+  if (req.method === "GET") {
+    const urlObj = new URL(req.url!, `http://localhost`);
+    const hash = urlObj.searchParams.get("hash");
+    if (!hash) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "hash required" }));
+      return;
+    }
+    const data = await invictusGet(`/transactions/${hash}`);
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(data));
     return;
   }
 

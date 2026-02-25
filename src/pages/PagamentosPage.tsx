@@ -45,6 +45,21 @@ function randomCustomer() {
   };
 }
 
+// ─── transaction hash extractor ─────────────────────────────────────────────
+
+function extractTransactionHash(data: unknown): string | null {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  // API wraps response in { success, data: { hash, ... } }
+  return (
+    ((obj.data as Record<string, unknown>)?.hash as string) ??
+    ((obj.data as Record<string, unknown>)?.id as string) ??
+    (obj.hash as string) ??
+    (obj.id as string) ??
+    null
+  );
+}
+
 // ─── pix extractor ───────────────────────────────────────────────────────────
 
 // InvictusPay PIX response shape:
@@ -171,6 +186,7 @@ const PagamentosPage = () => {
   const [pixQrCodeImage, setPixQrCodeImage] = useState("");
   const [apiError, setApiError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).catch(() => {
@@ -221,6 +237,8 @@ const PagamentosPage = () => {
 
         setPixQrCode(pix.qrCode);
         setPixQrCodeImage(pix.qrCodeImage);
+        const hash = extractTransactionHash(data);
+        if (hash) setTransactionHash(hash);
         setStep("pix");
       } catch (err) {
         setApiError("Erro de conexão. Verifique sua internet e tente novamente.");
@@ -231,6 +249,49 @@ const PagamentosPage = () => {
     generate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Poll for payment confirmation ─────────────────────────────────────────
+  useEffect(() => {
+    if (step !== "pix" || !transactionHash) return;
+
+    let stopped = false;
+    let pollCount = 0;
+    const MAX_POLLS = 120; // ~10 minutes at 5 s intervals
+    const PAID_STATUSES = ["paid", "approved", "completed", "confirmed"];
+
+    const poll = async () => {
+      if (stopped || pollCount >= MAX_POLLS) return;
+      pollCount++;
+      try {
+        const res = await fetch(`/api/invictus/transactions?hash=${transactionHash}`);
+        if (res.ok) {
+          const json = await res.json();
+          // API response: { success: true, data: { status: "paid", ... } }
+          const status = (
+            (json?.data?.status as string) ??
+            (json?.status as string) ??
+            ""
+          ).toLowerCase();
+          if (PAID_STATUSES.includes(status)) {
+            stopped = true;
+            firePurchase(amount);
+            setStep("paid");
+            return;
+          }
+        }
+      } catch {
+        // silent — keep polling
+      }
+      if (!stopped) setTimeout(poll, 5000);
+    };
+
+    const timer = setTimeout(poll, 5000);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, transactionHash]);
 
   // ── Paid ─────────────────────────────────────────────────────────────────
   if (step === "paid") {
