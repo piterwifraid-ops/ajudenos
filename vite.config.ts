@@ -77,12 +77,12 @@ async function localTransactionsHandler(req: IncomingMessage, res: ServerRespons
         },
         items: [
           {
-            title: "Doação",
+            title: "Rifa Diego Faustino",
             unitPrice: amount,
             quantity: 1,
           },
         ],
-        description: "Doação via Vakinha",
+        description: "Rifa Diego Faustino",
       }),
     });
 

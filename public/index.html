@@ -4,6 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>App</title>
+    <!-- UTM Capture & Persistence -->
+    <!-- Facebook Ads URL template: ?utm_source=FB&utm_campaign={{campaign.name}}|{{campaign.id}}&utm_medium={{adset.name}}|{{adset.id}}&utm_content={{ad.name}}|{{ad.id}}&utm_term={{placement}} -->
+    <script>
+      (function () {
+        var utmKeys = ['utm_source','utm_campaign','utm_medium','utm_content','utm_term'];
+        var params = new URLSearchParams(window.location.search);
+        var stored = JSON.parse(sessionStorage.getItem('utms') || '{}');
+        var found = false;
+        utmKeys.forEach(function(k) {
+          if (params.has(k)) { stored[k] = params.get(k); found = true; }
+        });
+        if (found) sessionStorage.setItem('utms', JSON.stringify(stored));
+        else if (Object.keys(stored).length) {
+          var url = new URL(window.location.href);
+          var changed = false;
+          utmKeys.forEach(function(k) {
+            if (stored[k] && !url.searchParams.has(k)) {
+              url.searchParams.set(k, stored[k]); changed = true;
+            }
+          });
+          if (changed) history.replaceState(null, '', url.toString());
+        }
+      })();
+    </script>
+
     <!-- Prioridade máxima para o player ConverteAI -->
     <script src="https://scripts.converteai.net/a7551695-f0bb-4457-a0de-39daa8722731/players/697c32847e3c196b02b6867e/v4/player.js" async></script>
   </head>

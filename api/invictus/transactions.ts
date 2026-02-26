@@ -102,12 +102,12 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       },
       items: [
         {
-          title: "Doação",
+          title: "Rifa Diego Faustino",
           unitPrice: amount,
           quantity: 1,
         },
       ],
-      description: "Doação via Vakinha",
+      description: "Rifa Diego Faustino",
     });
 
     res.writeHead(status, { "Content-Type": "application/json" });
