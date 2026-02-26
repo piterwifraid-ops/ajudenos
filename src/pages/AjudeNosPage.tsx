@@ -53,12 +53,62 @@ const css = `
     overflow: hidden;
     background: #000;
     margin-bottom: 14px;
+    position: relative;
   }
   .vk-galeria img {
     width: 100%;
     height: 240px;
     object-fit: cover;
-    object-position: center top;
+    object-position: center;
+    display: none;
+  }
+  .vk-galeria img.active {
+    display: block;
+    animation: fadeSlide 0.4s ease;
+  }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: scale(1.03); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.45);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    z-index: 2;
+    padding: 0;
+  }
+  .carousel-btn:hover { background: rgba(0,0,0,0.7); }
+  .carousel-btn.prev { left: 8px; }
+  .carousel-btn.next { right: 8px; }
+  .carousel-dots {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+  }
+  .carousel-dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.5);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .carousel-dots span.active {
+    background: #fff;
   }
 
   .vk-hearts-row {
@@ -105,67 +155,119 @@ const css = `
   }
   .vk-heart-count svg { width: 15px; height: 15px; }
 
-  .vk-perfil-box {
+  .donation-widget {
     background: #fff;
-    padding: 14px;
-    border-radius: 10px;
+    padding: 16px;
+    border-radius: 12px;
     margin-bottom: 14px;
   }
-  .vk-perfil {
+  .progress-section { margin-bottom: 16px; }
+  .progress-amounts {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
   }
-  .vk-perfil .vk-avatar {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    background: #ccc;
-    overflow: hidden;
-    flex-shrink: 0;
-    border: 2px solid #f1f0f0;
+  .progress-raised {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1a1a1a;
   }
-  .vk-perfil .vk-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .vk-dadosPerfil .vk-ativo {
-    font-size: 11px;
-    color: #404040;
-    font-weight: 700;
-    display: block;
-  }
-  .vk-dadosPerfil .vk-vakinhas {
-    font-size: 11px;
-    color: #404040;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin-top: 2px;
-  }
-  .vk-bullet {
-    width: 4px; height: 4px;
-    border-radius: 50%;
-    background: #404040;
-    display: inline-block;
-  }
-
-  .vk-porcentagem {
+  .progress-goal {
     font-size: 13px;
-    font-weight: 700;
-    color: var(--cor-texto);
-    margin-bottom: 4px;
-    display: block;
+    color: #888;
   }
-  .vk-barra-total {
+  .progress-bar-bg {
     height: 10px;
     background: #f1f0f0;
     border-radius: 15px;
     overflow: hidden;
     margin-bottom: 8px;
   }
-  .vk-barra-parcial {
+  .progress-bar-fill {
     background: var(--cor-primaria);
     height: 100%;
     border-radius: 15px;
+  }
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #666;
+  }
+  .donation-values {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .donation-val {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 10px 8px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a1a;
+    position: relative;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .donation-val small {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: #888;
+    margin-top: 2px;
+  }
+  .donation-val:hover, .donation-val.selected { border-color: var(--cor-primaria); background: #f0faf4; }
+  .donation-val.featured { border-color: var(--cor-primaria); background: #f0faf4; }
+  .donation-val .badge {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--cor-primaria);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+  .share-row {
+    display: flex;
+    gap: 6px;
+    margin: 12px 0 10px;
+  }
+  .share-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 8px 4px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #333;
+    font-family: "Montserrat", sans-serif;
+    transition: background 0.15s;
+  }
+  .share-btn:hover { background: #f5f5f5; }
+  .share-btn.whatsapp { color: #25d366; border-color: #25d366; }
+  .share-btn.whatsapp:hover { background: #f0fff5; }
+  .secure-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #888;
+    margin-top: 4px;
   }
   .vk-arrecadado-val {
     font-size: 22px;
@@ -215,6 +317,51 @@ const css = `
     line-height: 1.6;
     margin-bottom: 10px;
     color: #282828;
+  }
+
+  .description h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 20px 0 10px;
+    line-height: 1.3;
+  }
+  .description p {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #333;
+    margin-bottom: 12px;
+  }
+  .quote {
+    background: #f0faf4;
+    border-left: 4px solid var(--cor-primaria);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-style: italic;
+    font-size: 14px;
+    color: #444;
+    margin: 16px 0;
+    line-height: 1.6;
+  }
+  .quote small {
+    display: block;
+    margin-top: 8px;
+    font-style: normal;
+    font-size: 12px;
+    color: #777;
+  }
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin: 16px 0;
+  }
+  .photo-grid img {
+    width: 100%;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 6px;
+    cursor: pointer;
   }
 
   .vk-btn-ajudar {
@@ -460,6 +607,15 @@ const css = `
 const AjudeNosPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("sobre");
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const carouselImages = [
+    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora1.webp", alt: "Resgate em Juiz de Fora" },
+    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora2.webp", alt: "Comunidade unida na limpeza" },
+    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora3.webp", alt: "Cidade inundada - vista aérea" },
+    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora4.webp", alt: "Operação de resgate com maquinário" },
+    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora5.webp", alt: "Destruição e busca por sobreviventes" },
+    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora6.webp", alt: "Impacto da tragédia em Juiz de Fora" },
+  ];
   const [showModal, setShowModal] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [popupVisible, setPopupVisible] = useState(false);
@@ -486,6 +642,13 @@ const AjudeNosPage = () => {
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCarouselIndex(prev => (prev + 1) % carouselImages.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const irParaPagamento = (valor: number) => {
     setShowModal(false);
     navigate(`/pagamentos?valor=${valor.toFixed(2)}`);
@@ -510,22 +673,45 @@ const AjudeNosPage = () => {
         {/* TOP */}
         <div className="vk-topVakinha">
           <span className="vk-categoria">TRAGÉDIAS / DESASTRES</span>
-          <h1>Lama, destruição e hora de recomeço. Ajude famílias de Minas Gerais a recomeçar</h1>
+          <h1 className="campaign-title">Ajude as vítimas das chuvas em Juiz de Fora - MG</h1>
           <span className="vk-id">ID: IKEVW2ZUHYEF</span>
         </div>
 
         {/* GALERIA */}
         <div className="vk-galeria">
-          <img
-            src="https://static.vakinha.com.br/uploads/vakinha/image/5967476/1771980471.567.jpg"
-            alt="Padre Lucas"
-            onError={(e) => {
-              const t = e.currentTarget;
-              t.style.background = "#1a1a2e";
-              t.style.height = "240px";
-              t.removeAttribute("src");
-            }}
-          />
+          {carouselImages.map((img, i) => (
+            <img
+              key={i}
+              src={img.src}
+              alt={img.alt}
+              className={i === carouselIndex ? "active" : ""}
+            />
+          ))}
+          <button
+            className="carousel-btn prev"
+            onClick={() => setCarouselIndex((carouselIndex - 1 + carouselImages.length) % carouselImages.length)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+          </button>
+          <button
+            className="carousel-btn next"
+            onClick={() => setCarouselIndex((carouselIndex + 1) % carouselImages.length)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+          <div className="carousel-dots">
+            {carouselImages.map((_, i) => (
+              <span
+                key={i}
+                className={i === carouselIndex ? "active" : ""}
+                onClick={() => setCarouselIndex(i)}
+              />
+            ))}
+          </div>
         </div>
         {/* CORAÇÕES */}
         <div className="vk-hearts-row">
@@ -550,30 +736,40 @@ const AjudeNosPage = () => {
         </div>
 
         {/* PERFIL + PROGRESSO */}
-        <div className="vk-perfil-box">
-          <div className="vk-perfil">
-            <div className="vk-avatar">
-              <svg viewBox="0 0 48 48" width="42" height="42">
-                <circle cx="24" cy="24" r="24" fill="#bbb" />
-                <circle cx="24" cy="18" r="8" fill="#fff" />
-                <path d="M12 36c0-6.6 5.4-12 12-12s12 5.4 12 12" stroke="#fff" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-              </svg>
+        <div className="donation-widget">
+          {/* Progress */}
+          <div className="progress-section">
+            <div className="progress-amounts">
+              <div className="progress-raised">R$ 41.280</div>
+              <div className="progress-goal">Meta: R$ 60.000</div>
             </div>
-            <div className="vk-dadosPerfil">
-              <span className="vk-ativo">Ativo(a) no Vakinha desde 24/02/2026</span>
-              <span className="vk-vakinhas">
-                1 vaquinhas criada <span className="vk-bullet"></span> 1 vaquinha apoiada
-              </span>
+            <div className="progress-bar-bg">
+              <div className="progress-bar-fill" style={{ width: "68%" }}></div>
+            </div>
+            <div className="progress-info">
+              <span><strong>68%</strong> arrecadado</span>
+              <span><strong>347</strong> doações</span>
             </div>
           </div>
-          <span className="vk-porcentagem">73%</span>
-          <div className="vk-barra-total">
-            <div className="vk-barra-parcial" style={{ width: "73%" }}></div>
+
+          {/* Values */}
+          <div className="donation-values">
+            <div className="donation-val" onClick={() => navigate("/pagamentos?valor=20.00")}>
+              R$ 20<small>Ajuda básica</small>
+            </div>
+            <div className="donation-val featured" onClick={() => navigate("/pagamentos?valor=50.00")}>
+              <span className="badge">POPULAR</span>
+              R$ 50<small>Cesta parcial</small>
+            </div>
+            <div className="donation-val" onClick={() => navigate("/pagamentos?valor=100.00")}>
+              R$ 100<small>Cesta completa</small>
+            </div>
+            <div className="donation-val" onClick={() => navigate("/pagamentos?valor=200.00")}>
+              R$ 200<small>Kit recomeço</small>
+            </div>
           </div>
-          <div style={{ marginTop: 6 }}>
-            <span className="vk-arrecadado-val">R$ 221.874,60</span>
-            <span className="vk-arrecadado-meta"> de R$ 300.000,00</span>
-          </div>
+
+          {/* CTA */}
         </div>
 
         {/* TABS */}
@@ -595,22 +791,100 @@ const AjudeNosPage = () => {
         {activeTab === "sobre" && (
           <div className="vk-show-sobre">
             <span className="vk-inicio"><strong>Vaquinha criada em:</strong> 24/02/2026</span>
-            <p><strong>✅ Vaquinha Verificada</strong></p>
-            <p><strong>Ajude famílias de Minas Gerais a recomeçar</strong></p>
-            <p>As chuvas que atingiram <strong>Minas Gerais em fevereiro de 2026</strong> foram devastadoras. Em questão de horas, famílias inteiras viram tudo que construíram a vida inteira ser levado pela enchente. Casa, móveis, documentos, roupas — <strong>tudo embaixo da lama.</strong></p>
-            <p>Tem criança que dormiu no chão frio. Tem idoso que perdeu os remédios. Tem mãe que ficou sem fraldas pro bebê. Gente que não tem pra onde ir, sem ter o que comer, <strong>esperando uma ajuda que demora a chegar.</strong></p>
-            <p>Não é notícia de TV não. É a <strong>realidade de milhares de famílias mineiras agora</strong>, nesse momento, enquanto você lê isso aqui.</p>
-            <p><strong>Bairros inteiros submersos. Estradas cortadas. Pontes destruídas.</strong> Famílias ilhadas sem acesso a água potável, comida ou abrigo. O Corpo de Bombeiros trabalhando sem parar, mas a <strong>dimensão da tragédia é grande demais</strong> pra poucos conseguirem resolver.</p>
-            <p>O que a gente tá pedindo não é muito. Com pouquinho de cada um, a gente consegue:</p>
-            <p><strong>Cestas básicas</strong> pra quem tá sem comer</p>
-            <p><strong>Água potável e kits de higiene</strong> pra quem tá sem nada</p>
-            <p><strong>Colchões e cobertores</strong> pra quem tá dormindo no chão</p>
-            <p><strong>Fraldas, leite e roupas</strong> pra crianças e bebês</p>
-            <p><strong>Material de limpeza</strong> pra ajudar quem começar a reconstruir</p>
-            <p>Cada real doado vai <strong>direto pra compra de itens de emergência</strong> e entrega nas comunidades mais afetadas. Sem enrolação, sem burocracia, sem desvio. <strong>Povo ajudando povo</strong>, do jeito que o brasileiro sabe fazer.</p>
-            <p>Se você tem condição de ajudar, <strong>não deixa pra depois</strong>. Esses vizinhos nossos precisam agora. Não semana que vem. <strong>Agora.</strong></p>
-            <p>Compartilha também. Um compartilhamento seu pode chegar em alguém que vai querer ajudar. <strong>Juntos a gente chega lá.</strong></p>
-            <p><em>"A solidariedade começa quando a gente para de olhar e começa a agir."</em></p>
+            <div className="description">
+              <h2>A maior tragédia da história de Juiz de Fora</h2>
+              <p>
+                Na noite de segunda-feira, 23 de fevereiro de 2026, um temporal histórico atingiu Juiz de
+                Fora e a Zona da Mata Mineira. Em poucas horas, foram registrados mais de <strong>209
+                  milímetros de chuva</strong>, com acumulado mensal chegando a <strong>589,6 mm</strong>
+                — quase o triplo da média histórica de 170 mm para fevereiro. Foi o mês mais chuvoso já
+                registrado na história do município.
+              </p>
+              <p>
+                A prefeita Margarida Salomão decretou <strong>estado de calamidade pública</strong> na
+                madrugada de terça-feira (24). O governo do estado decretou <strong>luto oficial de 3
+                  dias</strong>.
+              </p>
+
+              <div className="quote">
+                "A gente só queria acordar desse pesadelo. Mas a lama não vai embora sozinha, e o frio não
+                espera a água baixar."
+                <br /><small>— Moradora do bairro São Pedro</small>
+              </div>
+
+              <h2>Os números da devastação</h2>
+              <p>
+                <strong>• +30 mortos</strong> confirmados apenas em Juiz de Fora<br />
+                <strong>• 39 pessoas desaparecidas</strong> — entre elas crianças<br />
+                <strong>• +3.000 desabrigados</strong> que perderam tudo<br />
+                <strong>• 208 pessoas resgatadas</strong> com vida dos escombros<br />
+                <strong>• 600 famílias</strong> que precisaram deixar suas casas<br />
+                <strong>• 211 ocorrências</strong> de deslizamentos em uma única noite
+              </p>
+              <p>
+                O Rio Paraibuna transbordou em diversos pontos, isolando bairros inteiros. Os bairros mais
+                atingidos foram <strong>JK, Santa Rita, Vila Ideal, Lourdes, Vila Alpina, São Benedito, Vila
+                  Olavo Costa e Parque Burnier</strong> — onde 12 casas desabaram e 17 pessoas seguem
+                desaparecidas.
+              </p>
+
+              <div className="photo-grid">
+                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora3.webp" alt="Vista aérea da enchente - Rio Paraibuna transbordado" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
+                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora1.webp" alt="Bombeiros resgatando vítimas" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
+                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora2.webp" alt="Comunidade unida na busca" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
+              </div>
+
+              <h2>136 bombeiros em campo — mas não é suficiente</h2>
+              <p>
+                Ao todo, <strong>136 bombeiros militares</strong> estão empenhados nas operações de busca e
+                resgate. Na madrugada de terça-feira, 13 pessoas foram resgatadas com vida. Mas as equipes
+                não dão conta da demanda: familiares e voluntários cavam com as próprias mãos na lama em
+                busca de seus entes queridos.
+              </p>
+              <p>
+                <strong>A previsão é de que a chuva continue até sexta-feira (27/02).</strong> O Inmet
+                mantém alerta vermelho de grande perigo para a região. A situação pode piorar a qualquer
+                momento.
+              </p>
+
+              <div className="photo-grid">
+                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora4.webp" alt="Operação de resgate com maquinário pesado" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
+                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora5.webp" alt="Destruição total nos bairros" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
+                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora6.webp" alt="Impacto da tragédia" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
+              </div>
+
+              <h2>Para onde vai sua doação</h2>
+              <p>
+                Todo o valor arrecadado será destinado exclusivamente à compra de itens de primeira
+                necessidade para as mais de 3 mil pessoas desabrigadas:
+              </p>
+              <p>
+                <strong>✓ Cestas básicas</strong> — alimentação emergencial para as próximas semanas<br />
+                <strong>✓ Água potável</strong> — garrafões e kits de purificação<br />
+                <strong>✓ Colchões e cobertores</strong> — para os abrigos temporários lotados<br />
+                <strong>✓ Kits de higiene</strong> — produtos essenciais de limpeza pessoal<br />
+                <strong>✓ Materiais de limpeza</strong> — para as famílias que começam a retornar aos escombros
+              </p>
+
+              <h2>Transparência total</h2>
+              <p>
+                <strong>100% do valor arrecadado</strong> é repassado diretamente às famílias atingidas.
+                Toda compra é fotografada e publicada na aba de atualizações. A prestação de contas é feita
+                em parceria com o comitê comunitário local de Juiz de Fora.
+              </p>
+
+              <div className="quote">
+                "Ver seus filhos perguntando por que não podemos voltar pra casa é a dor mais profunda que
+                um pai pode sentir. Qualquer ajuda, por menor que seja, devolve a esperança."
+                <br /><small>— Pai de família do bairro Parque Burnier</small>
+              </div>
+
+              <p>
+                <strong>Sua ajuda não compra apenas mantimentos. Ela compra a esperança de que amanhã será
+                  diferente.</strong> Juiz de Fora é uma cidade de gente forte, mas ninguém suporta tanto
+                peso sozinho. Com mais de 30 vidas perdidas e milhares sem teto, cada real faz diferença.
+              </p>
+            </div>
             <button className="vk-btn-ajudar" onClick={() => setShowModal(true)}>Quero Ajudar</button>
           </div>
         )}
