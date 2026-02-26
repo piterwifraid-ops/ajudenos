@@ -192,6 +192,27 @@ const PagamentosPage = () => {
   };
 
   useEffect(() => {
+    if (!document.querySelector('script[data-utmify-pixel]')) {
+      (window as Window & { pixelId?: string }).pixelId = "699fed529f103cff7458c6ae";
+      const a = document.createElement("script");
+      a.setAttribute("async", "");
+      a.setAttribute("defer", "");
+      a.setAttribute("src", "https://cdn.utmify.com.br/scripts/pixel/pixel.js");
+      a.setAttribute("data-utmify-pixel", "");
+      document.head.appendChild(a);
+    }
+    if (!document.querySelector('script[src="https://cdn.utmify.com.br/scripts/utms/latest.js"]')) {
+      const b = document.createElement("script");
+      b.src = "https://cdn.utmify.com.br/scripts/utms/latest.js";
+      b.setAttribute("data-utmify-prevent-xcod-sck", "");
+      b.setAttribute("data-utmify-prevent-subids", "");
+      b.async = true;
+      b.defer = true;
+      document.head.appendChild(b);
+    }
+  }, []);
+
+  useEffect(() => {
     const generate = async () => {
       try {
         const res = await fetch("/api/invictus/transactions", {
