@@ -8,7 +8,7 @@
     <!-- Facebook Ads URL template: ?utm_source=FB&utm_campaign={{campaign.name}}|{{campaign.id}}&utm_medium={{adset.name}}|{{adset.id}}&utm_content={{ad.name}}|{{ad.id}}&utm_term={{placement}} -->
     <script>
       (function () {
-        var utmKeys = ['utm_source','utm_campaign','utm_medium','utm_content','utm_term'];
+        var utmKeys = ['utm_source','utm_campaign','utm_medium','utm_content','utm_term','src','sck'];
         var params = new URLSearchParams(window.location.search);
         var stored = JSON.parse(sessionStorage.getItem('utms') || '{}');
         var found = false;

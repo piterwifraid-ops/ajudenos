@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import VakinhaHeader from "../components/VakinhaHeader";
 
@@ -178,6 +178,86 @@ const PagamentosPage = () => {
   const [copied, setCopied] = useState(false);
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
 
+  const customerRef = useRef<ReturnType<typeof randomCustomer> | null>(null);
+  const orderCreatedAtRef = useRef<string>("");
+  const orderIdRef = useRef<string>("");
+
+  const getUtms = () => {
+    try {
+      // Merge stored UTMs with any params currently in the URL (most authoritative source)
+      const stored: Record<string, string> = JSON.parse(sessionStorage.getItem("utms") || "{}");
+      const params = new URLSearchParams(window.location.search);
+      const ALL_KEYS = ["utm_source","utm_campaign","utm_medium","utm_content","utm_term","src","sck"];
+      ALL_KEYS.forEach((k) => { if (params.has(k)) stored[k] = params.get(k)!; });
+      // Persist merged result back
+      if (Object.keys(stored).length) sessionStorage.setItem("utms", JSON.stringify(stored));
+      return stored;
+    } catch { return {}; }
+  };
+
+  const toUtcString = (d: Date) =>
+    d.toISOString().replace("T", " ").substring(0, 19);
+
+  const sendUtmifyOrder = async (
+    status: "waiting_payment" | "paid",
+    approvedDate: string | null
+  ) => {
+    const utms = getUtms();
+    const customer = customerRef.current;
+    if (!customer) return;
+    const body = {
+      orderId: orderIdRef.current || transactionHash || "unknown",
+      platform: "AjudeNos",
+      paymentMethod: "pix",
+      status,
+      createdAt: orderCreatedAtRef.current,
+      approvedDate,
+      refundedAt: null,
+      customer: {
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        document: customer.document,
+        country: "BR",
+      },
+      products: [{
+        id: "rifa-diego-faustino",
+        name: "Rifa Diego Faustino",
+        planId: null,
+        planName: null,
+        quantity: 1,
+        priceInCents: amountCents,
+      }],
+      trackingParameters: {
+        src: utms.src ?? null,
+        sck: utms.sck ?? null,
+        utm_source: utms.utm_source ?? null,
+        utm_campaign: utms.utm_campaign ?? null,
+        utm_medium: utms.utm_medium ?? null,
+        utm_content: utms.utm_content ?? null,
+        utm_term: utms.utm_term ?? null,
+      },
+      commission: {
+        totalPriceInCents: amountCents,
+        gatewayFeeInCents: Math.round(amountCents * 0.03),
+        userCommissionInCents: Math.round(amountCents * 0.97),
+      },
+      isTest: false,
+    };
+    try {
+      await fetch("https://api.utmify.com.br/api-credentials/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-token": "JjObnSTglPuwVfyK3PBVaFGlcKKS885LQrhe",
+        },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      // silent — don't block payment flow
+    }
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).catch(() => {
       const el = document.createElement("textarea");
@@ -192,6 +272,14 @@ const PagamentosPage = () => {
   };
 
   useEffect(() => {
+    // ── Capture UTMs from URL immediately on mount ──
+    const UTM_KEYS = ["utm_source","utm_campaign","utm_medium","utm_content","utm_term","src","sck"];
+    const urlParams = new URLSearchParams(window.location.search);
+    const storedUtms: Record<string, string> = JSON.parse(sessionStorage.getItem("utms") || "{}");
+    let foundUtm = false;
+    UTM_KEYS.forEach(k => { if (urlParams.has(k)) { storedUtms[k] = urlParams.get(k)!; foundUtm = true; } });
+    if (foundUtm) sessionStorage.setItem("utms", JSON.stringify(storedUtms));
+
     if (!document.querySelector('script[data-utmify-pixel]')) {
       (window as Window & { pixelId?: string }).pixelId = "699fed529f103cff7458c6ae";
       const a = document.createElement("script");
@@ -215,12 +303,16 @@ const PagamentosPage = () => {
   useEffect(() => {
     const generate = async () => {
       try {
+        const customer = randomCustomer();
+        customerRef.current = customer;
+        const now = new Date();
+        orderCreatedAtRef.current = now.toISOString().replace("T", " ").substring(0, 19);
         const res = await fetch("/api/invictus/transactions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amount: amountCents,
-            customer: randomCustomer(),
+            customer,
           }),
         });
 
@@ -249,8 +341,9 @@ const PagamentosPage = () => {
         setPixQrCode(pix.qrCode);
         setPixQrCodeImage(pix.qrCodeImage);
         const hash = extractTransactionHash(data);
-        if (hash) setTransactionHash(hash);
+        if (hash) { setTransactionHash(hash); orderIdRef.current = hash; }
         setStep("pix");
+        sendUtmifyOrder("waiting_payment", null);
       } catch (err) {
         setApiError("Erro de conexão. Verifique sua internet e tente novamente.");
         setStep("error");
@@ -287,6 +380,7 @@ const PagamentosPage = () => {
           if (PAID_STATUSES.includes(status)) {
             stopped = true;
             firePurchase(amount);
+            sendUtmifyOrder("paid", toUtcString(new Date()));
             setStep("paid");
             return;
           }
@@ -549,7 +643,7 @@ const PagamentosPage = () => {
       {/* Confirm paid */}
       <div style={{ ...s.card, textAlign: "center" }}>
         <button
-          onClick={() => { firePurchase(amount); setStep("paid"); }}
+          onClick={() => { firePurchase(amount); sendUtmifyOrder("paid", toUtcString(new Date())); setStep("paid"); }}
           style={{
             background: "none",
             border: "2px solid #24ca68",
@@ -565,6 +659,7 @@ const PagamentosPage = () => {
         </button>
       </div>
 
+      
       {/* How to pay via QR */}
       {pixQrCodeImage && (
         <div style={s.card}>

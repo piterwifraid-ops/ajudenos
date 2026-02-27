@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import AjudeNosPage from "./pages/AjudeNosPage";
 import PagamentosPage from "./pages/PagamentosPage";
 
-const UTM_KEYS = ["utm_source", "utm_campaign", "utm_medium", "utm_content", "utm_term"];
+const UTM_KEYS = ["utm_source", "utm_campaign", "utm_medium", "utm_content", "utm_term", "src", "sck"];
 
 function UtmPersistor() {
   const location = useLocation();

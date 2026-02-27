@@ -60,52 +60,7 @@ const css = `
     height: 240px;
     object-fit: cover;
     object-position: center;
-    display: none;
-  }
-  .vk-galeria img.active {
     display: block;
-    animation: fadeSlide 0.4s ease;
-  }
-  @keyframes fadeSlide {
-    from { opacity: 0; transform: scale(1.03); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-  .carousel-btn {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(0,0,0,0.45);
-    border: none;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: #fff;
-    z-index: 2;
-    padding: 0;
-  }
-  .carousel-btn:hover { background: rgba(0,0,0,0.7); }
-  .carousel-btn.prev { left: 8px; }
-  .carousel-btn.next { right: 8px; }
-  .carousel-dots {
-    position: absolute;
-    bottom: 8px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 6px;
-    z-index: 2;
-  }
-  .carousel-dots span {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.5);
-    cursor: pointer;
-    transition: background 0.2s;
   }
   .carousel-dots span.active {
     background: #fff;
@@ -326,11 +281,32 @@ const css = `
     margin: 20px 0 10px;
     line-height: 1.3;
   }
+  .description h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 18px 0 8px;
+    line-height: 1.3;
+  }
   .description p {
     font-size: 14px;
     line-height: 1.7;
     color: #333;
     margin-bottom: 12px;
+  }
+  .description ul {
+    padding-left: 20px;
+    margin-bottom: 12px;
+  }
+  .description li {
+    font-size: 14px;
+    line-height: 1.7;
+    color: #333;
+    margin-bottom: 6px;
+  }
+  .description a {
+    color: var(--cor-secundaria);
+    text-decoration: underline;
   }
   .quote {
     background: #f0faf4;
@@ -607,15 +583,7 @@ const css = `
 const AjudeNosPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("sobre");
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const carouselImages = [
-    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora1.webp", alt: "Resgate em Juiz de Fora" },
-    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora2.webp", alt: "Comunidade unida na limpeza" },
-    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora3.webp", alt: "Cidade inundada - vista aérea" },
-    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora4.webp", alt: "Operação de resgate com maquinário" },
-    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora5.webp", alt: "Destruição e busca por sobreviventes" },
-    { src: "https://ajudejf.com/Chuvas%20Juiz%20De%20Fora6.webp", alt: "Impacto da tragédia em Juiz de Fora" },
-  ];
+  const heroImage = { src: "https://static.vakinha.com.br/uploads/vakinha/image/5965746/1772127395.703.jpg?ims=700x410", alt: "SOS Minas Gerais - vítimas das chuvas e deslizamentos" };
   const [showModal, setShowModal] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [popupVisible, setPopupVisible] = useState(false);
@@ -626,6 +594,14 @@ const AjudeNosPage = () => {
   const tempos = ["Há 1 minuto","Há 2 minutos","Há 3 minutos","Há 5 minutos","Há 7 minutos"];
 
   useEffect(() => {
+    // ── Capture UTMs from URL and persist to sessionStorage ──
+    const UTM_KEYS = ["utm_source","utm_campaign","utm_medium","utm_content","utm_term","src","sck"];
+    const urlParams = new URLSearchParams(window.location.search);
+    const storedUtms: Record<string, string> = JSON.parse(sessionStorage.getItem("utms") || "{}");
+    let foundUtm = false;
+    UTM_KEYS.forEach(k => { if (urlParams.has(k)) { storedUtms[k] = urlParams.get(k)!; foundUtm = true; } });
+    if (foundUtm) sessionStorage.setItem("utms", JSON.stringify(storedUtms));
+
     if (!document.querySelector('script[data-utmify-pixel]')) {
       (window as Window & { pixelId?: string }).pixelId = "699fed529f103cff7458c6ae";
       const a = document.createElement("script");
@@ -672,7 +648,19 @@ const AjudeNosPage = () => {
 
   const irParaPagamento = (valor: number) => {
     setShowModal(false);
-    navigate(`/pagamentos?valor=${valor.toFixed(2)}`);
+    // Forward all captured UTMs in the navigation URL so they survive SPA routing
+    const UTM_KEYS = ["utm_source","utm_campaign","utm_medium","utm_content","utm_term","src","sck"];
+    const params = new URLSearchParams(`valor=${valor.toFixed(2)}`);
+    try {
+      const stored: Record<string, string> = JSON.parse(sessionStorage.getItem("utms") || "{}");
+      // Also pick from current URL in case sessionStorage not yet updated
+      const urlP = new URLSearchParams(window.location.search);
+      UTM_KEYS.forEach(k => {
+        const v = urlP.get(k) || stored[k];
+        if (v) params.set(k, v);
+      });
+    } catch {/* ignore */}
+    navigate(`/pagamentos?${params.toString()}`);
   };
 
   const irParaPagamentoPersonalizado = () => {
@@ -700,39 +688,7 @@ const AjudeNosPage = () => {
 
         {/* GALERIA */}
         <div className="vk-galeria">
-          {carouselImages.map((img, i) => (
-            <img
-              key={i}
-              src={img.src}
-              alt={img.alt}
-              className={i === carouselIndex ? "active" : ""}
-            />
-          ))}
-          <button
-            className="carousel-btn prev"
-            onClick={() => setCarouselIndex((carouselIndex - 1 + carouselImages.length) % carouselImages.length)}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-          </button>
-          <button
-            className="carousel-btn next"
-            onClick={() => setCarouselIndex((carouselIndex + 1) % carouselImages.length)}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m9 18 6-6-6-6" />
-            </svg>
-          </button>
-          <div className="carousel-dots">
-            {carouselImages.map((_, i) => (
-              <span
-                key={i}
-                className={i === carouselIndex ? "active" : ""}
-                onClick={() => setCarouselIndex(i)}
-              />
-            ))}
-          </div>
+          <img src={heroImage.src} alt={heroImage.alt} />
         </div>
         {/* CORAÇÕES */}
         <div className="vk-hearts-row">
@@ -813,98 +769,59 @@ const AjudeNosPage = () => {
           <div className="vk-show-sobre">
             <span className="vk-inicio"><strong>Vaquinha criada em:</strong> 24/02/2026</span>
             <div className="description">
-              <h2>A maior tragédia da história de Juiz de Fora</h2>
+              <h2><strong>SOS Minas Gerais: doe agora para vítimas das chuvas e deslizamentos.</strong></h2>
               <p>
-                Na noite de segunda-feira, 23 de fevereiro de 2026, um temporal histórico atingiu Juiz de
-                Fora e a Zona da Mata Mineira. Em poucas horas, foram registrados mais de <strong>209
-                  milímetros de chuva</strong>, com acumulado mensal chegando a <strong>589,6 mm</strong>
-                — quase o triplo da média histórica de 170 mm para fevereiro. Foi o mês mais chuvoso já
-                registrado na história do município.
+                ATUALIZAÇÃO (26/02/2026, [11:40]): Minas Gerais enfrenta um cenário de <strong>EMERGÊNCIA</strong> após chuvas históricas. Segundo o Corpo de Bombeiros e a Defesa Civil, 48 óbitos já foram confirmados e mais de 3500 pessoas encontram-se desabrigadas. As cidades de Juiz de Fora e Ubá são as mais atingidas, com bairros inteiros soterrados e rios transbordados.&nbsp;Municípios como Matias Barbosa também sofrem com os impactos severos.
               </p>
               <p>
-                A prefeita Margarida Salomão decretou <strong>estado de calamidade pública</strong> na
-                madrugada de terça-feira (24). O governo do estado decretou <strong>luto oficial de 3
-                  dias</strong>.
+                ✅ Esta é a vaquinha "SOS Minas Gerais" do Instituto Vakinha para levar ajuda emergencial aos afetados, com rapidez, segurança e transparência ao doador.
               </p>
 
-              <div className="quote">
-                "A gente só queria acordar desse pesadelo. Mas a lama não vai embora sozinha, e o frio não
-                espera a água baixar."
-                <br /><small>— Moradora do bairro São Pedro</small>
-              </div>
+              <h3>OBJETIVO FINANCEIRO DA CAMPANHA:</h3>
+              <ul>
+                <li>Valor: R$ 500.000,00</li>
+                <li><strong>Importante</strong>: A meta não é limitante, valores adicionais serão igualmente direcionados às organizações parceiras em benefício dos afetados.</li>
+              </ul>
 
-              <h2>Os números da devastação</h2>
-              <p>
-                <strong>• +30 mortos</strong> confirmados apenas em Juiz de Fora<br />
-                <strong>• 39 pessoas desaparecidas</strong> — entre elas crianças<br />
-                <strong>• +3.000 desabrigados</strong> que perderam tudo<br />
-                <strong>• 208 pessoas resgatadas</strong> com vida dos escombros<br />
-                <strong>• 600 famílias</strong> que precisaram deixar suas casas<br />
-                <strong>• 211 ocorrências</strong> de deslizamentos em uma única noite
-              </p>
-              <p>
-                O Rio Paraibuna transbordou em diversos pontos, isolando bairros inteiros. Os bairros mais
-                atingidos foram <strong>JK, Santa Rita, Vila Ideal, Lourdes, Vila Alpina, São Benedito, Vila
-                  Olavo Costa e Parque Burnier</strong> — onde 12 casas desabaram e 17 pessoas seguem
-                desaparecidas.
-              </p>
+              <h3>COMO SUA DOAÇÃO VIRA AJUDA?</h3>
+              <p>Sua contribuição financia itens essenciais para quem perdeu tudo:</p>
+              <ul>
+                <li>Água potável, kits de higiene e limpeza</li>
+                <li>Cestas básicas e refeições prontas (segurança alimentar)</li>
+                <li>Colchões, cobertores e roupas (ajuda emergencial)</li>
+                <li>Apoio logístico para chegar a áreas isoladas&nbsp;</li>
+              </ul>
 
-              <div className="photo-grid">
-                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora3.webp" alt="Vista aérea da enchente - Rio Paraibuna transbordado" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
-                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora1.webp" alt="Bombeiros resgatando vítimas" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
-                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora2.webp" alt="Comunidade unida na busca" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
-              </div>
+              <h3>POR QUE DOAR AGORA?</h3>
+              <p>Nas primeiras horas de uma tragédia, a velocidade salva vidas. Com o solo instável e o risco persistente, a necessidade de itens básicos cresce a cada dia.</p>
 
-              <h2>136 bombeiros em campo — mas não é suficiente</h2>
-              <p>
-                Ao todo, <strong>136 bombeiros militares</strong> estão empenhados nas operações de busca e
-                resgate. Na madrugada de terça-feira, 13 pessoas foram resgatadas com vida. Mas as equipes
-                não dão conta da demanda: familiares e voluntários cavam com as próprias mãos na lama em
-                busca de seus entes queridos.
-              </p>
-              <p>
-                <strong>A previsão é de que a chuva continue até sexta-feira (27/02).</strong> O Inmet
-                mantém alerta vermelho de grande perigo para a região. A situação pode piorar a qualquer
-                momento.
-              </p>
+              <h3>TRANSPARÊNCIA:</h3>
+              <p>O <strong>Instituto Vakinha</strong> seleciona e acompanha organizações com idoneidade e capacidade local para execução no campo. Nesta campanha, vamos publicar:</p>
+              <ul>
+                <li>1) Atualizações frequentes com data/hora;</li>
+                <li>2) Metas e marcos de arrecadação;</li>
+                <li>3) <a href="https://www.docs.google.com/spreadsheets/d/1MBmbVhPvRhK5lUYlPY25OBC8hlpc5fekAhJdEr8MrVU/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">Registros de repasse aos parceiros;</a></li>
+                <li>4) Relatório consolidado ao final.</li>
+              </ul>
 
-              <div className="photo-grid">
-                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora4.webp" alt="Operação de resgate com maquinário pesado" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
-                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora5.webp" alt="Destruição total nos bairros" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
-                <img src="https://ajudejf.com/Chuvas%20Juiz%20De%20Fora6.webp" alt="Impacto da tragédia" onClick={(e) => { const t = e.target as HTMLImageElement; window.open(t.src); }} />
-              </div>
+              <h3>COMO AJUDAR (EM 2 MINUTOS):</h3>
+              <ul>
+                <li>1) Doe qualquer valor pela página (R$ 25 já ajuda);</li>
+                <li>2) Se preferir, doe via Pix: <strong>sosminas@vakinha.com.br</strong>;</li>
+                <li>3) Compartilhe este link em grupos de WhatsApp e redes sociais;</li>
+                <li>4) Empresas e Organizações: Para doação em escala e parceria local, fale com comunicação@institutovakinha.com.br.</li>
+              </ul>
 
-              <h2>Para onde vai sua doação</h2>
-              <p>
-                Todo o valor arrecadado será destinado exclusivamente à compra de itens de primeira
-                necessidade para as mais de 3 mil pessoas desabrigadas:
-              </p>
-              <p>
-                <strong>✓ Cestas básicas</strong> — alimentação emergencial para as próximas semanas<br />
-                <strong>✓ Água potável</strong> — garrafões e kits de purificação<br />
-                <strong>✓ Colchões e cobertores</strong> — para os abrigos temporários lotados<br />
-                <strong>✓ Kits de higiene</strong> — produtos essenciais de limpeza pessoal<br />
-                <strong>✓ Materiais de limpeza</strong> — para as famílias que começam a retornar aos escombros
-              </p>
+              <p><i>Minas Gerais não pode esperar.&nbsp;Sua doação é o recomeço.</i></p>
 
-              <h2>Transparência total</h2>
-              <p>
-                <strong>100% do valor arrecadado</strong> é repassado diretamente às famílias atingidas.
-                Toda compra é fotografada e publicada na aba de atualizações. A prestação de contas é feita
-                em parceria com o comitê comunitário local de Juiz de Fora.
-              </p>
+              <h3>ORGANIZAÇÕES PARCEIRAS NA CAMPANHA:</h3>
+              <ul>
+                <li><strong>OIM:</strong> A Agência da ONU para as Migrações (OIM) é a principal agência da Organização das Nações Unidas (ONU) dedicada a garantir que a migração ocorra de forma ordenada, humana e segura. Atuando em frentes que vão do apoio em crises humanitárias ao auxílio em políticas migratórias nacionais, ela trabalha diretamente com governos e migrantes para proteger os direitos de quem se desloca, promover o desenvolvimento socioeconômico através da mobilidade e enfrentar os desafios práticos da gestão migratória global.</li>
+                <li><strong>HUMUS:</strong> A HUMUS é uma organização brasileira do terceiro setor, sem fins lucrativos, especializada na gestão de desastres e na prestação de auxílio humanitário em situações de emergência extrema. Composta por profissionais técnicos e voluntários capacitados, a instituição atua de forma estratégica tanto na resposta imediata a catástrofes naturais — como inundações e deslizamentos — quanto na prevenção e mitigação de riscos, utilizando geotecnologias e treinamento especializado para salvar vidas e reconstruir a resiliência em comunidades vulneráveis.</li>
+                <li><strong>GRABH:</strong> O GRABH (Grupo de Resgate Animal de Belo Horizonte) é uma organização técnica especializada em medicina veterinária de desastres e salvamento animal em cenários críticos, como enchentes, inundações e incêndios florestais. Composto por médicos veterinários e bombeiros civis capacitados em resgate técnico, o grupo atua de forma estratégica na Zona da Mata em 2026, focando na retirada de animais ilhados, feridos ou presos em estruturas colapsadas, aplicando protocolos científicos de triagem e manejo — fundamentais para reduzir o sofrimento animal e prevenir riscos sanitários (como zoonoses) — garantindo que a fauna doméstica e silvestre receba atendimento especializado enquanto as equipes oficiais priorizam as vítimas humanas.</li>
+              </ul>
 
-              <div className="quote">
-                "Ver seus filhos perguntando por que não podemos voltar pra casa é a dor mais profunda que
-                um pai pode sentir. Qualquer ajuda, por menor que seja, devolve a esperança."
-                <br /><small>— Pai de família do bairro Parque Burnier</small>
-              </div>
-
-              <p>
-                <strong>Sua ajuda não compra apenas mantimentos. Ela compra a esperança de que amanhã será
-                  diferente.</strong> Juiz de Fora é uma cidade de gente forte, mas ninguém suporta tanto
-                peso sozinho. Com mais de 30 vidas perdidas e milhares sem teto, cada real faz diferença.
-              </p>
+              <p>&nbsp;</p>
             </div>
             <button className="vk-btn-ajudar" onClick={() => setShowModal(true)}>Quero Ajudar</button>
           </div>

@@ -5,6 +5,14 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
+    // ── Capture UTMs from URL and persist to sessionStorage ──
+    const UTM_KEYS = ["utm_source","utm_campaign","utm_medium","utm_content","utm_term","src","sck"];
+    const urlParams = new URLSearchParams(window.location.search);
+    const storedUtms: Record<string, string> = JSON.parse(sessionStorage.getItem("utms") || "{}");
+    let foundUtm = false;
+    UTM_KEYS.forEach(k => { if (urlParams.has(k)) { storedUtms[k] = urlParams.get(k)!; foundUtm = true; } });
+    if (foundUtm) sessionStorage.setItem("utms", JSON.stringify(storedUtms));
+
     if (!document.querySelector('script[data-utmify-pixel]')) {
       (window as Window & { pixelId?: string }).pixelId = "699fed529f103cff7458c6ae";
       const a = document.createElement("script");

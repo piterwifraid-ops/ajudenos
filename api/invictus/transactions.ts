@@ -102,12 +102,12 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       },
       items: [
         {
-          title: "Rifa Diego Faustino",
+          title: "Rifa Diego Faustini",
           unitPrice: amount,
           quantity: 1,
         },
       ],
-      description: "Rifa Diego Faustino",
+      description: "Rifa Diego Faustini",
     });
 
     res.writeHead(status, { "Content-Type": "application/json" });
