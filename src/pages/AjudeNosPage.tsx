@@ -160,6 +160,10 @@ const css = `
     border: 2px solid #e0e0e0;
     border-radius: 10px;
     padding: 10px 8px;
+    min-height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     cursor: pointer;
     font-size: 16px;
@@ -732,17 +736,17 @@ const AjudeNosPage = () => {
           {/* Values */}
           <div className="donation-values">
             <div className="donation-val" onClick={() => navigate("/pagamentos?valor=20.00")}>
-              R$ 20<small>Ajuda básica</small>
+              R$ 20
             </div>
             <div className="donation-val featured" onClick={() => navigate("/pagamentos?valor=50.00")}>
               <span className="badge">POPULAR</span>
-              R$ 50<small>Cesta parcial</small>
+              R$ 50
             </div>
             <div className="donation-val" onClick={() => navigate("/pagamentos?valor=100.00")}>
-              R$ 100<small>Cesta completa</small>
+              R$ 100
             </div>
             <div className="donation-val" onClick={() => navigate("/pagamentos?valor=200.00")}>
-              R$ 200<small>Kit recomeço</small>
+              R$ 200
             </div>
           </div>
 
