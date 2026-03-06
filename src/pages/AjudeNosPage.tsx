@@ -582,6 +582,19 @@ const css = `
     font-weight: 700;
     cursor: pointer;
   }
+
+  @media (max-width: 480px) {
+    .progress-raised {
+      font-size: 18px;
+    }
+    .progress-goal {
+      font-size: 11px;
+    }
+    .progress-amounts {
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+  }
 `;
 
 const AjudeNosPage = () => {
@@ -686,7 +699,7 @@ const AjudeNosPage = () => {
         {/* TOP */}
         <div className="vk-topVakinha">
           <span className="vk-categoria">TRAGÉDIAS / DESASTRES</span>
-          <h1 className="campaign-title">Ajude as vítimas das chuvas em Juiz de Fora - MG</h1>
+          <h1 className="campaign-title">Ajude as vítimas das chuvas em Juiz de Fora e Ubá- MG</h1>
           <span className="vk-id">ID: IKEVW2ZUHYEF</span>
         </div>
 
@@ -721,32 +734,15 @@ const AjudeNosPage = () => {
           {/* Progress */}
           <div className="progress-section">
             <div className="progress-amounts">
-              <div className="progress-raised">R$ 41.280</div>
-              <div className="progress-goal">Meta: R$ 60.000</div>
+              <div className="progress-raised">R$ 37.653.000</div>
+              <div className="progress-goal">Meta: R$ 5.000.000</div>
             </div>
             <div className="progress-bar-bg">
-              <div className="progress-bar-fill" style={{ width: "68%" }}></div>
+              <div className="progress-bar-fill" style={{ width: "77%" }}></div>
             </div>
             <div className="progress-info">
-              <span><strong>68%</strong> arrecadado</span>
-              <span><strong>347</strong> doações</span>
-            </div>
-          </div>
-
-          {/* Values */}
-          <div className="donation-values">
-            <div className="donation-val" onClick={() => navigate("/pagamentos?valor=20.00")}>
-              R$ 20
-            </div>
-            <div className="donation-val featured" onClick={() => navigate("/pagamentos?valor=50.00")}>
-              <span className="badge">POPULAR</span>
-              R$ 50
-            </div>
-            <div className="donation-val" onClick={() => navigate("/pagamentos?valor=100.00")}>
-              R$ 100
-            </div>
-            <div className="donation-val" onClick={() => navigate("/pagamentos?valor=200.00")}>
-              R$ 200
+              <span><strong>77%</strong> arrecadado</span>
+              <span><strong>37.653</strong> doações</span>
             </div>
           </div>
 
@@ -811,9 +807,8 @@ const AjudeNosPage = () => {
               <h3>COMO AJUDAR (EM 2 MINUTOS):</h3>
               <ul>
                 <li>1) Doe qualquer valor pela página (R$ 25 já ajuda);</li>
-                <li>2) Se preferir, doe via Pix: <strong>sosminas@vakinha.com.br</strong>;</li>
-                <li>3) Compartilhe este link em grupos de WhatsApp e redes sociais;</li>
-                <li>4) Empresas e Organizações: Para doação em escala e parceria local, fale com comunicação@institutovakinha.com.br.</li>
+                <li>2) Compartilhe este link em grupos de WhatsApp e redes sociais;</li>
+                <li>3) Empresas e Organizações: Para doação em escala e parceria local, fale com comunicação@institutovakinha.com.br.</li>
               </ul>
 
               <p><i>Minas Gerais não pode esperar.&nbsp;Sua doação é o recomeço.</i></p>
@@ -946,11 +941,11 @@ const AjudeNosPage = () => {
             <div className="vk-donation-grid">
               <button onClick={() => irParaPagamento(20)}>R$ 20</button>
               <button onClick={() => irParaPagamento(30)}>R$ 30</button>
+              <button onClick={() => irParaPagamento(50)}>R$ 50</button>
               <div className="vk-mais-doado-wrap">
                 <span className="vk-mais-doado-badge">MAIS DOADO</span>
-                <button className="vk-highlight" onClick={() => irParaPagamento(50)} style={{ width: "100%" }}>R$ 50</button>
+                <button className="vk-highlight" onClick={() => irParaPagamento(100)} style={{ width: "100%" }}>R$ 100</button>
               </div>
-              <button onClick={() => irParaPagamento(100)}>R$ 100</button>
               <button onClick={() => irParaPagamento(150)}>R$ 150</button>
               <button onClick={() => irParaPagamento(200)}>R$ 200</button>
               <button onClick={() => irParaPagamento(500)}>R$ 500</button>
