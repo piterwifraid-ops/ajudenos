@@ -55,30 +55,41 @@ function randomCustomer() {
 function extractTransactionHash(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
   const obj = data as Record<string, unknown>;
-  // Duttyfy returns { transactionId: "uuid", pixCode, status }
+  // Blackcat returns { success: true, data: { transactionId, ... } }
+  const innerData = obj.data as Record<string, unknown> | undefined;
   return (
+    (innerData?.transactionId as string) ??
     (obj.transactionId as string) ??
-    ((obj._id as Record<string, unknown>)?.["$oid"] as string) ??
     null
   );
 }
 
 // â”€â”€â”€ pix extractor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// Duttyfy PIX response shape:
-// { pixCode: string, transactionId: string, status: "PENDING" }
+// Blackcat PIX response shape:
+// { success: true, data: { transactionId, paymentData: { copyPaste, qrCodeBase64, qrCode } } }
 function extractPixData(data: unknown): { qrCode: string; qrCodeImage: string } | null {
   if (!data || typeof data !== "object") return null;
   const obj = data as Record<string, unknown>;
+  const innerData = obj.data as Record<string, unknown> | undefined;
+  const paymentData = innerData?.paymentData as Record<string, unknown> | undefined;
 
-  const qrCode = (obj.pixCode as string) ?? "";
+  const qrCode =
+    (paymentData?.copyPaste as string) ??
+    (paymentData?.qrCode as string) ??
+    "";
 
   if (!qrCode) return null;
 
-  // Generate QR image via public service
-  const imageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`;
+  // qrCodeBase64 from Blackcat may be a raw base64 string (no data URI prefix) or
+  // a full data URI. Only use it when it already carries the proper prefix.
+  const raw = paymentData?.qrCodeBase64 as string | undefined;
+  const qrCodeImage =
+    raw?.startsWith("data:image")
+      ? raw
+      : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`;
 
-  return { qrCode, qrCodeImage: imageUrl };
+  return { qrCode, qrCodeImage };
 }
 
 // â”€â”€â”€ icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -307,21 +318,36 @@ const PagamentosPage = () => {
         const now = new Date();
         orderCreatedAtRef.current = now.toISOString().replace("T", " ").substring(0, 19);
         const utms = getUtms();
-        const utmString = Object.entries(utms).map(([k, v]) => `${k}=${v}`).join("&");
-        const res = await fetch("/api/duttyfy/transactions", {
+        const res = await fetch("/api/blackcat/transactions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amount: amountCents,
-            description: "Doação SOS Minas Gerais",
-            customer,
-            item: {
-              title: "Doação SOS Minas Gerais",
-              price: amountCents,
-              quantity: 1,
+            currency: "BRL",
+            paymentMethod: "pix",
+            items: [
+              {
+                title: "Doação SOS Minas Gerais",
+                unitPrice: amountCents,
+                quantity: 1,
+                tangible: false,
+              },
+            ],
+            customer: {
+              name: customer.name,
+              email: customer.email,
+              phone: customer.phone,
+              document: {
+                number: customer.document,
+                type: "cpf",
+              },
             },
-            paymentMethod: "PIX",
-            ...(utmString ? { utm: utmString } : {}),
+            pix: { expiresInDays: 1 },
+            ...(utms.utm_source ? { utm_source: utms.utm_source } : {}),
+            ...(utms.utm_medium ? { utm_medium: utms.utm_medium } : {}),
+            ...(utms.utm_campaign ? { utm_campaign: utms.utm_campaign } : {}),
+            ...(utms.utm_content ? { utm_content: utms.utm_content } : {}),
+            ...(utms.utm_term ? { utm_term: utms.utm_term } : {}),
           }),
         });
 
@@ -375,15 +401,16 @@ const PagamentosPage = () => {
       if (stopped || pollCount >= MAX_POLLS) return;
       pollCount++;
       try {
-        const res = await fetch(`/api/duttyfy/transactions?transactionId=${transactionHash}`);
+        const res = await fetch(`/api/blackcat/transactions?id=${transactionHash}`);
         if (res.ok) {
           const json = await res.json();
-          // Duttyfy returns { status: "PENDING" | "COMPLETED", paidAt? }
+          // Blackcat returns { success: true, data: { status: "PENDING" | "PAID" | "CANCELLED" } }
           const status = (
+            ((json?.data as Record<string, unknown>)?.status as string) ??
             (json?.status as string) ??
             ""
           ).toUpperCase();
-          const PAID_STATUSES_UPPER = ["COMPLETED", "PAID", "APPROVED"];
+          const PAID_STATUSES_UPPER = ["PAID", "COMPLETED", "APPROVED"];
           if (PAID_STATUSES_UPPER.includes(status)) {
             stopped = true;
             firePurchase(amount);
@@ -501,7 +528,7 @@ const PagamentosPage = () => {
             gap: 16,
           }}
         >
-          <div style={{ fontSize: 48 }}>âš ï¸</div>
+          <div style={{ fontSize: 48 }}>⚠️</div>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0 }}>
             Não foi possível gerar o PIX
           </h2>
@@ -546,7 +573,7 @@ const PagamentosPage = () => {
               textDecoration: "underline",
             }}
           >
-            â† Voltar para a vaquinha
+            ← Voltar para a vaquinha
           </button>
         </div>
       </div>
@@ -608,7 +635,7 @@ const PagamentosPage = () => {
             />
           </div>
           <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
-            No app do seu banco, escolha <strong>Pix â€º Ler QR Code</strong>
+            No app do seu banco, escolha <strong>Pix › Ler QR Code</strong>
           </p>
         </div>
       )}
@@ -714,7 +741,7 @@ const PagamentosPage = () => {
             textDecoration: "underline",
           }}
         >
-          â† Voltar para a vaquinha
+          ← Voltar para a vaquinha
         </button>
       </div>
     </div>
