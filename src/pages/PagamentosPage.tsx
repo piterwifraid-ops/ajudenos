@@ -248,7 +248,7 @@ const PagamentosPage = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-token": "JjObnSTglPuwVfyK3PBVaFGlcKKS885LQrhe",
+          "x-api-token": "bQLlK7iwg71Y8TYV4FFlNJIxJcdQKbJnWIq0",
         },
         body: JSON.stringify(body),
       });
