@@ -10,6 +10,9 @@ const BABYLON_BASE = "https://api.bancobabylon.com/functions/v1";
 
 const DUTTYFY_ENCRYPTED_URL = "https://www.pagamentos-seguros.app/api-pix/ERaU_NVyY-LvawtJWDIhBoWRqoRyKZ-1zxYpl_TclE8F26Wv_pm8dCLxpzXLrsz1Q89aTg2RUqVxYKVhwQsitg";
 
+const BLACKCAT_BASE = "https://api.blackcatpay.com.br/api";
+const BLACKCAT_API_KEY = "sk_live_c349db83471321a9c6bafd5f8072a52cfdd90e4bd753b742de9072951fa15001";
+
 function babylonAuthHeader() {
   const credentials = Buffer.from(`${BABYLON_SECRET_KEY}:${BABYLON_COMPANY_ID}`).toString("base64");
   return `Basic ${credentials}`;
@@ -155,6 +158,69 @@ async function localDuttyfyHandler(req: IncomingMessage, res: ServerResponse) {
 }
 
 // https://vitejs.dev/config/
+async function localBlackcatHandler(req: IncomingMessage, res: ServerResponse) {
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  // GET /api/blackcat/transactions?id=<transactionId> — poll status
+  if (req.method === "GET") {
+    try {
+      const urlObj = new URL(req.url!, "http://localhost");
+      const id = urlObj.searchParams.get("id");
+      if (!id) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "id required" }));
+        return;
+      }
+      const upstream = await fetch(`${BLACKCAT_BASE}/sales/${encodeURIComponent(id)}/status`, {
+        headers: {
+          "X-API-Key": BLACKCAT_API_KEY,
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await upstream.json();
+      res.writeHead(upstream.status);
+      res.end(JSON.stringify(data));
+    } catch (err) {
+      console.error("[blackcat-api] GET error:", err);
+      res.writeHead(500);
+      res.end(JSON.stringify({ error: "Erro ao consultar transação" }));
+    }
+    return;
+  }
+
+  // POST — create PIX sale
+  try {
+    const raw = await readBody(req);
+    const body = JSON.parse(raw);
+
+    const upstream = await fetch(`${BLACKCAT_BASE}/sales/create-sale`, {
+      method: "POST",
+      headers: {
+        "X-API-Key": BLACKCAT_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const txData = await upstream.json();
+    console.log("[blackcat-api] POST status:", upstream.status, JSON.stringify(txData));
+    res.writeHead(upstream.status);
+    res.end(JSON.stringify(txData));
+  } catch (err) {
+    console.error("[blackcat-api] POST error:", err);
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: "Erro interno ao gerar PIX", detail: String(err) }));
+  }
+}
+
+// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
@@ -184,6 +250,18 @@ export default defineConfig(({ mode }) => ({
         server.middlewares.use("/api/duttyfy/transactions", (req, res, next) => {
           if (req.method === "POST" || req.method === "GET" || req.method === "OPTIONS") {
             localDuttyfyHandler(req, res);
+          } else {
+            next();
+          }
+        });
+      },
+    },
+    {
+      name: "local-blackcat-api",
+      configureServer(server) {
+        server.middlewares.use("/api/blackcat/transactions", (req, res, next) => {
+          if (req.method === "POST" || req.method === "GET" || req.method === "OPTIONS") {
+            localBlackcatHandler(req, res);
           } else {
             next();
           }
