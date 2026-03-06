@@ -734,7 +734,7 @@ const AjudeNosPage = () => {
           {/* Progress */}
           <div className="progress-section">
             <div className="progress-amounts">
-              <div className="progress-raised">R$ 37.653.000</div>
+              <div className="progress-raised">R$ 3.714.653.000</div>
               <div className="progress-goal">Meta: R$ 5.000.000,00</div>
             </div>
             <div className="progress-bar-bg">
@@ -779,7 +779,7 @@ const AjudeNosPage = () => {
 
               <h3>OBJETIVO FINANCEIRO DA CAMPANHA:</h3>
               <ul>
-                <li>Valor: R$ 500.000,00</li>
+                <li>Valor: R$ 5.000.000,00</li>
                 <li><strong>Importante</strong>: A meta não é limitante, valores adicionais serão igualmente direcionados às organizações parceiras em benefício dos afetados.</li>
               </ul>
 
@@ -976,5 +976,6 @@ const AjudeNosPage = () => {
 };
 
 export default AjudeNosPage;
+
 
 
