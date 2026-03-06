@@ -734,7 +734,7 @@ const AjudeNosPage = () => {
           {/* Progress */}
           <div className="progress-section">
             <div className="progress-amounts">
-              <div className="progress-raised">R$ 3.714.653,00</div>
+              <div className="progress-raised">R$ 3.765.163,81</div>
               <div className="progress-goal">Meta: R$ 5.000.000,00</div>
             </div>
             <div className="progress-bar-bg">
@@ -976,7 +976,4 @@ const AjudeNosPage = () => {
 };
 
 export default AjudeNosPage;
-
-
-
 

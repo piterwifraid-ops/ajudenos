@@ -1,19 +1,24 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import VakinhaHeader from "../components/VakinhaHeader";
 
-// ─── random data generators ──────────────────────────────────────────────────
+// â”€â”€â”€ random data generators â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function randomCPF(): string {
-  const n = () => Math.floor(Math.random() * 9);
-  const d = Array.from({ length: 9 }, n);
-  const calc = (arr: number[], weights: number[]) =>
-    arr.reduce((s, v, i) => s + v * weights[i], 0);
-  const d1 = (11 - (calc(d, [10, 9, 8, 7, 6, 5, 4, 3, 2]) % 11)) % 10;
-  d.push(d1);
-  const d2 = (11 - (calc(d, [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) % 11)) % 10;
-  d.push(d2);
-  return d.join("");
+  // Generate until we get a valid CPF (rejects all-same-digit sequences)
+  while (true) {
+    const d = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));
+    // All digits the same → invalid CPF
+    if (d.every(x => x === d[0])) continue;
+    const sum1 = d.reduce((s, v, i) => s + v * (10 - i), 0);
+    const r1 = sum1 % 11;
+    const d1 = r1 < 2 ? 0 : 11 - r1;
+    const d2arr = [...d, d1];
+    const sum2 = d2arr.reduce((s, v, i) => s + v * (11 - i), 0);
+    const r2 = sum2 % 11;
+    const d2 = r2 < 2 ? 0 : 11 - r2;
+    return [...d, d1, d2].join("");
+  }
 }
 
 function randomPhone(): string {
@@ -45,44 +50,38 @@ function randomCustomer() {
   };
 }
 
-// ─── transaction id extractor ────────────────────────────────────────────────
+// â”€â”€â”€ transaction id extractor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function extractTransactionHash(data: unknown): string | null {
   if (!data || typeof data !== "object") return null;
   const obj = data as Record<string, unknown>;
-  // Banco BABYLON returns { id: "uuid", ... } at top level
+  // Duttyfy returns { transactionId: "uuid", pixCode, status }
   return (
-    (obj.id as string) ??
-    ((obj.data as Record<string, unknown>)?.id as string) ??
+    (obj.transactionId as string) ??
+    ((obj._id as Record<string, unknown>)?.["$oid"] as string) ??
     null
   );
 }
 
-// ─── pix extractor ───────────────────────────────────────────────────────────
+// â”€â”€â”€ pix extractor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// Banco BABYLON PIX response shape:
-// { id, pix: { qrcode: string, expirationDate, end2EndId, receiptUrl }, ... }
+// Duttyfy PIX response shape:
+// { pixCode: string, transactionId: string, status: "PENDING" }
 function extractPixData(data: unknown): { qrCode: string; qrCodeImage: string } | null {
   if (!data || typeof data !== "object") return null;
   const obj = data as Record<string, unknown>;
 
-  const pix = (obj.pix ?? (obj.data as Record<string, unknown>)?.pix) as Record<string, unknown> | undefined;
-
-  const qrCode =
-    (pix?.qrcode as string) ??
-    (pix?.pix_qr_code as string) ??
-    (pix?.qr_code as string) ??
-    "";
+  const qrCode = (obj.pixCode as string) ?? "";
 
   if (!qrCode) return null;
 
-  // Generate QR image via public service (Babylon doesn’t return base64)
+  // Generate QR image via public service
   const imageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`;
 
   return { qrCode, qrCodeImage: imageUrl };
 }
 
-// ─── icons ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const CopyIcon = () => (
   <svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
@@ -96,7 +95,7 @@ const CheckIcon = () => (
   </svg>
 );
 
-// ─── styles ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const s = {
   container: {
@@ -147,7 +146,7 @@ const s = {
   } as React.CSSProperties,
 };
 
-// ─── Facebook Pixel ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Facebook Pixel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Fire Facebook Pixel Purchase when payment is confirmed
 function firePurchase(value: number) {
@@ -159,7 +158,7 @@ function firePurchase(value: number) {
   }
 }
 
-// ─── component ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Step = "loading" | "pix" | "paid" | "error";
 
@@ -254,7 +253,7 @@ const PagamentosPage = () => {
         body: JSON.stringify(body),
       });
     } catch {
-      // silent — don't block payment flow
+      // silent â€” don't block payment flow
     }
   };
 
@@ -272,7 +271,7 @@ const PagamentosPage = () => {
   };
 
   useEffect(() => {
-    // ── Capture UTMs from URL immediately on mount ──
+    // â”€â”€ Capture UTMs from URL immediately on mount â”€â”€
     const UTM_KEYS = ["utm_source","utm_campaign","utm_medium","utm_content","utm_term","src","sck"];
     const urlParams = new URLSearchParams(window.location.search);
     const storedUtms: Record<string, string> = JSON.parse(sessionStorage.getItem("utms") || "{}");
@@ -307,12 +306,22 @@ const PagamentosPage = () => {
         customerRef.current = customer;
         const now = new Date();
         orderCreatedAtRef.current = now.toISOString().replace("T", " ").substring(0, 19);
-        const res = await fetch("/api/invictus/transactions", {
+        const utms = getUtms();
+        const utmString = Object.entries(utms).map(([k, v]) => `${k}=${v}`).join("&");
+        const res = await fetch("/api/duttyfy/transactions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amount: amountCents,
+            description: "Doação SOS Minas Gerais",
             customer,
+            item: {
+              title: "Doação SOS Minas Gerais",
+              price: amountCents,
+              quantity: 1,
+            },
+            paymentMethod: "PIX",
+            ...(utmString ? { utm: utmString } : {}),
           }),
         });
 
@@ -354,30 +363,28 @@ const PagamentosPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Poll for payment confirmation ─────────────────────────────────────────
+  // â”€â”€ Poll for payment confirmation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (step !== "pix" || !transactionHash) return;
 
     let stopped = false;
     let pollCount = 0;
-    const MAX_POLLS = 120; // ~10 minutes at 5 s intervals
-    const PAID_STATUSES = ["paid", "approved", "completed", "confirmed"];
+    const MAX_POLLS = 180; // ~15 minutes at 5 s intervals
 
     const poll = async () => {
       if (stopped || pollCount >= MAX_POLLS) return;
       pollCount++;
       try {
-        const res = await fetch(`/api/invictus/transactions?id=${transactionHash}`);
+        const res = await fetch(`/api/duttyfy/transactions?transactionId=${transactionHash}`);
         if (res.ok) {
           const json = await res.json();
-          // API response: { success: true, data: { status: "paid", ... } }
-          // Banco BABYLON returns status at top level
+          // Duttyfy returns { status: "PENDING" | "COMPLETED", paidAt? }
           const status = (
             (json?.status as string) ??
-            (json?.data?.status as string) ??
             ""
-          ).toLowerCase();
-          if (PAID_STATUSES.includes(status)) {
+          ).toUpperCase();
+          const PAID_STATUSES_UPPER = ["COMPLETED", "PAID", "APPROVED"];
+          if (PAID_STATUSES_UPPER.includes(status)) {
             stopped = true;
             firePurchase(amount);
             sendUtmifyOrder("paid", toUtcString(new Date()));
@@ -386,7 +393,7 @@ const PagamentosPage = () => {
           }
         }
       } catch {
-        // silent — keep polling
+        // silent â€” keep polling
       }
       if (!stopped) setTimeout(poll, 5000);
     };
@@ -399,7 +406,7 @@ const PagamentosPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, transactionHash]);
 
-  // ── Paid ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Paid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (step === "paid") {
     return (
       <div style={s.container}>
@@ -417,7 +424,7 @@ const PagamentosPage = () => {
             gap: 16,
           }}
         >
-          <div style={{ fontSize: 56 }}>💚</div>
+          <div style={{ fontSize: 56 }}>ðŸ’š</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>
             Obrigado pela sua doação!
           </h2>
@@ -445,7 +452,7 @@ const PagamentosPage = () => {
     );
   }
 
-  // ── Loading ───────────────────────────────────────────────────────────────
+  // â”€â”€ Loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (step === "loading") {
     return (
       <div style={s.container}>
@@ -478,7 +485,7 @@ const PagamentosPage = () => {
     );
   }
 
-  // ── Error ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Error â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (step === "error") {
     return (
       <div style={s.container}>
@@ -494,7 +501,7 @@ const PagamentosPage = () => {
             gap: 16,
           }}
         >
-          <div style={{ fontSize: 48 }}>⚠️</div>
+          <div style={{ fontSize: 48 }}>âš ï¸</div>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0 }}>
             Não foi possível gerar o PIX
           </h2>
@@ -539,14 +546,14 @@ const PagamentosPage = () => {
               textDecoration: "underline",
             }}
           >
-            ← Voltar para a vaquinha
+            â† Voltar para a vaquinha
           </button>
         </div>
       </div>
     );
   }
 
-  // ── PIX ───────────────────────────────────────────────────────────────────
+  // â”€â”€ PIX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <div style={s.container}>
       <VakinhaHeader />
@@ -601,7 +608,7 @@ const PagamentosPage = () => {
             />
           </div>
           <p style={{ fontSize: 12, color: "#6b7280", margin: 0 }}>
-            No app do seu banco, escolha <strong>Pix › Ler QR Code</strong>
+            No app do seu banco, escolha <strong>Pix â€º Ler QR Code</strong>
           </p>
         </div>
       )}
@@ -707,7 +714,7 @@ const PagamentosPage = () => {
             textDecoration: "underline",
           }}
         >
-          ← Voltar para a vaquinha
+          â† Voltar para a vaquinha
         </button>
       </div>
     </div>
