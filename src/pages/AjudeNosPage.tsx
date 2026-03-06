@@ -735,7 +735,7 @@ const AjudeNosPage = () => {
           <div className="progress-section">
             <div className="progress-amounts">
               <div className="progress-raised">R$ 37.653.000</div>
-              <div className="progress-goal">Meta: R$ 5.000.000</div>
+              <div className="progress-goal">Meta: R$ 5.000.000,00</div>
             </div>
             <div className="progress-bar-bg">
               <div className="progress-bar-fill" style={{ width: "77%" }}></div>
@@ -976,4 +976,5 @@ const AjudeNosPage = () => {
 };
 
 export default AjudeNosPage;
+
 
