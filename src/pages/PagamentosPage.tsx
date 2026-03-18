@@ -1,24 +1,19 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import VakinhaHeader from "../components/VakinhaHeader";
 
-// â”€â”€â”€ random data generators â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── random data generators ──────────────────────────────────────────────────
 
 function randomCPF(): string {
-  // Generate until we get a valid CPF (rejects all-same-digit sequences)
-  while (true) {
-    const d = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));
-    // All digits the same → invalid CPF
-    if (d.every(x => x === d[0])) continue;
-    const sum1 = d.reduce((s, v, i) => s + v * (10 - i), 0);
-    const r1 = sum1 % 11;
-    const d1 = r1 < 2 ? 0 : 11 - r1;
-    const d2arr = [...d, d1];
-    const sum2 = d2arr.reduce((s, v, i) => s + v * (11 - i), 0);
-    const r2 = sum2 % 11;
-    const d2 = r2 < 2 ? 0 : 11 - r2;
-    return [...d, d1, d2].join("");
-  }
+  const n = () => Math.floor(Math.random() * 9);
+  const d = Array.from({ length: 9 }, n);
+  const calc = (arr: number[], weights: number[]) =>
+    arr.reduce((s, v, i) => s + v * weights[i], 0);
+  const d1 = (11 - (calc(d, [10, 9, 8, 7, 6, 5, 4, 3, 2]) % 11)) % 10;
+  d.push(d1);
+  const d2 = (11 - (calc(d, [11, 10, 9, 8, 7, 6, 5, 4, 3, 2]) % 11)) % 10;
+  d.push(d2);
+  return d.join("");
 }
 
 function randomPhone(): string {
@@ -45,54 +40,44 @@ function randomCustomer() {
   return {
     name,
     email: randomEmail(name),
-    phone: randomPhone(),
+    phone_number: randomPhone(),
     document: randomCPF(),
   };
 }
 
-// â”€â”€â”€ transaction id extractor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── pix extractor ───────────────────────────────────────────────────────────
 
-function extractTransactionHash(data: unknown): string | null {
-  if (!data || typeof data !== "object") return null;
-  const obj = data as Record<string, unknown>;
-  // Blackcat returns { success: true, data: { transactionId, ... } }
-  const innerData = obj.data as Record<string, unknown> | undefined;
-  return (
-    (innerData?.transactionId as string) ??
-    (obj.transactionId as string) ??
-    null
-  );
-}
-
-// â”€â”€â”€ pix extractor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-// Blackcat PIX response shape:
-// { success: true, data: { transactionId, paymentData: { copyPaste, qrCodeBase64, qrCode } } }
+// InvictusPay PIX response shape:
+// { pix: { pix_qr_code: string, qr_code_base64: string|null }, ... }
 function extractPixData(data: unknown): { qrCode: string; qrCodeImage: string } | null {
   if (!data || typeof data !== "object") return null;
   const obj = data as Record<string, unknown>;
-  const innerData = obj.data as Record<string, unknown> | undefined;
-  const paymentData = innerData?.paymentData as Record<string, unknown> | undefined;
+
+  // Response is returned directly (not wrapped in .data)
+  const pix = (obj.pix ?? (obj.data as Record<string, unknown>)?.pix) as Record<string, unknown> | undefined;
 
   const qrCode =
-    (paymentData?.copyPaste as string) ??
-    (paymentData?.qrCode as string) ??
+    (pix?.pix_qr_code as string) ??
+    (pix?.qr_code as string) ??
+    (obj.pix_qr_code as string) ??
+    "";
+
+  const qrCodeImage =
+    (pix?.qr_code_base64 as string) ??
+    (pix?.qr_code_image as string) ??
     "";
 
   if (!qrCode) return null;
 
-  // qrCodeBase64 from Blackcat may be a raw base64 string (no data URI prefix) or
-  // a full data URI. Only use it when it already carries the proper prefix.
-  const raw = paymentData?.qrCodeBase64 as string | undefined;
-  const qrCodeImage =
-    raw?.startsWith("data:image")
-      ? raw
-      : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`;
+  // If no image returned by API, generate via public QR service
+  const imageUrl = qrCodeImage
+    ? `data:image/png;base64,${qrCodeImage}`
+    : `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCode)}`;
 
-  return { qrCode, qrCodeImage };
+  return { qrCode, qrCodeImage: imageUrl };
 }
 
-// â”€â”€â”€ icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── icons ───────────────────────────────────────────────────────────────────
 
 const CopyIcon = () => (
   <svg focusable="false" aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
@@ -106,7 +91,7 @@ const CheckIcon = () => (
   </svg>
 );
 
-// â”€â”€â”€ styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── styles ──────────────────────────────────────────────────────────────────
 
 const s = {
   container: {
@@ -157,19 +142,7 @@ const s = {
   } as React.CSSProperties,
 };
 
-// â”€â”€â”€ Facebook Pixel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-// Fire Facebook Pixel Purchase when payment is confirmed
-function firePurchase(value: number) {
-  if (typeof window !== "undefined" && typeof (window as any).fbq === "function") {
-    (window as any).fbq("trackSingle", "1488460169954912", "Purchase", {
-      value,
-      currency: "BRL",
-    });
-  }
-}
-
-// â”€â”€â”€ component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── component ───────────────────────────────────────────────────────────────
 
 type Step = "loading" | "pix" | "paid" | "error";
 
@@ -186,87 +159,6 @@ const PagamentosPage = () => {
   const [pixQrCodeImage, setPixQrCodeImage] = useState("");
   const [apiError, setApiError] = useState("");
   const [copied, setCopied] = useState(false);
-  const [transactionHash, setTransactionHash] = useState<string | null>(null);
-
-  const customerRef = useRef<ReturnType<typeof randomCustomer> | null>(null);
-  const orderCreatedAtRef = useRef<string>("");
-  const orderIdRef = useRef<string>("");
-
-  const getUtms = () => {
-    try {
-      // Merge stored UTMs with any params currently in the URL (most authoritative source)
-      const stored: Record<string, string> = JSON.parse(sessionStorage.getItem("utms") || "{}");
-      const params = new URLSearchParams(window.location.search);
-      const ALL_KEYS = ["utm_source","utm_campaign","utm_medium","utm_content","utm_term","src","sck"];
-      ALL_KEYS.forEach((k) => { if (params.has(k)) stored[k] = params.get(k)!; });
-      // Persist merged result back
-      if (Object.keys(stored).length) sessionStorage.setItem("utms", JSON.stringify(stored));
-      return stored;
-    } catch { return {}; }
-  };
-
-  const toUtcString = (d: Date) =>
-    d.toISOString().replace("T", " ").substring(0, 19);
-
-  const sendUtmifyOrder = async (
-    status: "waiting_payment" | "paid",
-    approvedDate: string | null
-  ) => {
-    const utms = getUtms();
-    const customer = customerRef.current;
-    if (!customer) return;
-    const body = {
-      orderId: orderIdRef.current || transactionHash || "unknown",
-      platform: "AjudeNos",
-      paymentMethod: "pix",
-      status,
-      createdAt: orderCreatedAtRef.current,
-      approvedDate,
-      refundedAt: null,
-      customer: {
-        name: customer.name,
-        email: customer.email,
-        phone: customer.phone,
-        document: customer.document,
-        country: "BR",
-      },
-      products: [{
-        id: "rifa-diego-faustino",
-        name: "Rifa Diego Faustino",
-        planId: null,
-        planName: null,
-        quantity: 1,
-        priceInCents: amountCents,
-      }],
-      trackingParameters: {
-        src: utms.src ?? null,
-        sck: utms.sck ?? null,
-        utm_source: utms.utm_source ?? null,
-        utm_campaign: utms.utm_campaign ?? null,
-        utm_medium: utms.utm_medium ?? null,
-        utm_content: utms.utm_content ?? null,
-        utm_term: utms.utm_term ?? null,
-      },
-      commission: {
-        totalPriceInCents: amountCents,
-        gatewayFeeInCents: Math.round(amountCents * 0.03),
-        userCommissionInCents: Math.round(amountCents * 0.97),
-      },
-      isTest: false,
-    };
-    try {
-      await fetch("https://api.utmify.com.br/api-credentials/orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-token": "bQLlK7iwg71Y8TYV4FFlNJIxJcdQKbJnWIq0",
-        },
-        body: JSON.stringify(body),
-      });
-    } catch {
-      // silent â€” don't block payment flow
-    }
-  };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).catch(() => {
@@ -282,72 +174,14 @@ const PagamentosPage = () => {
   };
 
   useEffect(() => {
-    // â”€â”€ Capture UTMs from URL immediately on mount â”€â”€
-    const UTM_KEYS = ["utm_source","utm_campaign","utm_medium","utm_content","utm_term","src","sck"];
-    const urlParams = new URLSearchParams(window.location.search);
-    const storedUtms: Record<string, string> = JSON.parse(sessionStorage.getItem("utms") || "{}");
-    let foundUtm = false;
-    UTM_KEYS.forEach(k => { if (urlParams.has(k)) { storedUtms[k] = urlParams.get(k)!; foundUtm = true; } });
-    if (foundUtm) sessionStorage.setItem("utms", JSON.stringify(storedUtms));
-
-    if (!document.querySelector('script[data-utmify-pixel]')) {
-      (window as Window & { pixelId?: string }).pixelId = "699fed529f103cff7458c6ae";
-      const a = document.createElement("script");
-      a.setAttribute("async", "");
-      a.setAttribute("defer", "");
-      a.setAttribute("src", "https://cdn.utmify.com.br/scripts/pixel/pixel.js");
-      a.setAttribute("data-utmify-pixel", "");
-      document.head.appendChild(a);
-    }
-    if (!document.querySelector('script[src="https://cdn.utmify.com.br/scripts/utms/latest.js"]')) {
-      const b = document.createElement("script");
-      b.src = "https://cdn.utmify.com.br/scripts/utms/latest.js";
-      b.setAttribute("data-utmify-prevent-xcod-sck", "");
-      b.setAttribute("data-utmify-prevent-subids", "");
-      b.async = true;
-      b.defer = true;
-      document.head.appendChild(b);
-    }
-  }, []);
-
-  useEffect(() => {
     const generate = async () => {
       try {
-        const customer = randomCustomer();
-        customerRef.current = customer;
-        const now = new Date();
-        orderCreatedAtRef.current = now.toISOString().replace("T", " ").substring(0, 19);
-        const utms = getUtms();
-        const res = await fetch("/api/blackcat/transactions", {
+        const res = await fetch("/api/invictus/transactions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             amount: amountCents,
-            currency: "BRL",
-            paymentMethod: "pix",
-            items: [
-              {
-                title: "Doação SOS Minas Gerais",
-                unitPrice: amountCents,
-                quantity: 1,
-                tangible: false,
-              },
-            ],
-            customer: {
-              name: customer.name,
-              email: customer.email,
-              phone: customer.phone,
-              document: {
-                number: customer.document,
-                type: "cpf",
-              },
-            },
-            pix: { expiresInDays: 1 },
-            ...(utms.utm_source ? { utm_source: utms.utm_source } : {}),
-            ...(utms.utm_medium ? { utm_medium: utms.utm_medium } : {}),
-            ...(utms.utm_campaign ? { utm_campaign: utms.utm_campaign } : {}),
-            ...(utms.utm_content ? { utm_content: utms.utm_content } : {}),
-            ...(utms.utm_term ? { utm_term: utms.utm_term } : {}),
+            customer: randomCustomer(),
           }),
         });
 
@@ -375,10 +209,7 @@ const PagamentosPage = () => {
 
         setPixQrCode(pix.qrCode);
         setPixQrCodeImage(pix.qrCodeImage);
-        const hash = extractTransactionHash(data);
-        if (hash) { setTransactionHash(hash); orderIdRef.current = hash; }
         setStep("pix");
-        sendUtmifyOrder("waiting_payment", null);
       } catch (err) {
         setApiError("Erro de conexão. Verifique sua internet e tente novamente.");
         setStep("error");
@@ -389,51 +220,7 @@ const PagamentosPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // â”€â”€ Poll for payment confirmation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  useEffect(() => {
-    if (step !== "pix" || !transactionHash) return;
-
-    let stopped = false;
-    let pollCount = 0;
-    const MAX_POLLS = 180; // ~15 minutes at 5 s intervals
-
-    const poll = async () => {
-      if (stopped || pollCount >= MAX_POLLS) return;
-      pollCount++;
-      try {
-        const res = await fetch(`/api/blackcat/transactions?id=${transactionHash}`);
-        if (res.ok) {
-          const json = await res.json();
-          // Blackcat returns { success: true, data: { status: "PENDING" | "PAID" | "CANCELLED" } }
-          const status = (
-            ((json?.data as Record<string, unknown>)?.status as string) ??
-            (json?.status as string) ??
-            ""
-          ).toUpperCase();
-          const PAID_STATUSES_UPPER = ["PAID", "COMPLETED", "APPROVED"];
-          if (PAID_STATUSES_UPPER.includes(status)) {
-            stopped = true;
-            firePurchase(amount);
-            sendUtmifyOrder("paid", toUtcString(new Date()));
-            setStep("paid");
-            return;
-          }
-        }
-      } catch {
-        // silent â€” keep polling
-      }
-      if (!stopped) setTimeout(poll, 5000);
-    };
-
-    const timer = setTimeout(poll, 5000);
-    return () => {
-      stopped = true;
-      clearTimeout(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, transactionHash]);
-
-  // â”€â”€ Paid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Paid ─────────────────────────────────────────────────────────────────
   if (step === "paid") {
     return (
       <div style={s.container}>
@@ -451,7 +238,7 @@ const PagamentosPage = () => {
             gap: 16,
           }}
         >
-          <div style={{ fontSize: 56 }}>ðŸ’š</div>
+          <div style={{ fontSize: 56 }}>💚</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>
             Obrigado pela sua doação!
           </h2>
@@ -479,7 +266,7 @@ const PagamentosPage = () => {
     );
   }
 
-  // â”€â”€ Loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Loading ───────────────────────────────────────────────────────────────
   if (step === "loading") {
     return (
       <div style={s.container}>
@@ -512,7 +299,7 @@ const PagamentosPage = () => {
     );
   }
 
-  // â”€â”€ Error â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Error ─────────────────────────────────────────────────────────────────
   if (step === "error") {
     return (
       <div style={s.container}>
@@ -580,7 +367,7 @@ const PagamentosPage = () => {
     );
   }
 
-  // â”€â”€ PIX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── PIX ───────────────────────────────────────────────────────────────────
   return (
     <div style={s.container}>
       <VakinhaHeader />
@@ -677,7 +464,7 @@ const PagamentosPage = () => {
       {/* Confirm paid */}
       <div style={{ ...s.card, textAlign: "center" }}>
         <button
-          onClick={() => { firePurchase(amount); sendUtmifyOrder("paid", toUtcString(new Date())); setStep("paid"); }}
+          onClick={() => setStep("paid")}
           style={{
             background: "none",
             border: "2px solid #24ca68",
@@ -693,7 +480,6 @@ const PagamentosPage = () => {
         </button>
       </div>
 
-      
       {/* How to pay via QR */}
       {pixQrCodeImage && (
         <div style={s.card}>
