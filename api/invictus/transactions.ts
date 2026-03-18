@@ -1,35 +1,21 @@
 import type { IncomingMessage, ServerResponse } from "http";
 
-const SECRET_KEY = "sk_live_dqsFdUZ8AWn8m2vWxAgImUZQsXvDoEv8i94xoI7MwcyHykIX";
-const COMPANY_ID = "52bef000-0bb0-42b2-a455-793dc0bd95f4";
-const BABYLON_BASE = "https://api.bancobabylon.com/functions/v1";
+const API_TOKEN = "TuvHpzBUr15I6Vd47MpA9Ukg8NbCZngMU5hqS2d7InPrwyF84R8zwpauaSBr";
+const INVICTUS_BASE = "https://api.invictuspay.app.br/api/public/v1";
 
-function authHeader() {
-  const credentials = Buffer.from(`${SECRET_KEY}:${COMPANY_ID}`).toString("base64");
-  return `Basic ${credentials}`;
-}
-
-async function babylonGet(path: string) {
-  const url = `${BABYLON_BASE}${path}`;
+async function invictusGet(path: string) {
+  const url = `${INVICTUS_BASE}${path}${path.includes("?") ? "&" : "?"}api_token=${API_TOKEN}`;
   const res = await fetch(url, {
-    headers: {
-      Authorization: authHeader(),
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
   });
   return res.json();
 }
 
-async function babylonPost(path: string, body: object) {
-  const url = `${BABYLON_BASE}${path}`;
+async function invictusPost(path: string, body: object) {
+  const url = `${INVICTUS_BASE}${path}${path.includes("?") ? "&" : "?"}api_token=${API_TOKEN}`;
   const res = await fetch(url, {
     method: "POST",
-    headers: {
-      Authorization: authHeader(),
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(body),
   });
   const data = await res.json();
@@ -48,27 +34,12 @@ async function readBody(req: IncomingMessage): Promise<string> {
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
-    return;
-  }
-
-  // GET /api/invictus/transactions?id=<uuid> — poll transaction status
-  if (req.method === "GET") {
-    const urlObj = new URL(req.url!, `http://localhost`);
-    const id = urlObj.searchParams.get("id");
-    if (!id) {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "id required" }));
-      return;
-    }
-    const data = await babylonGet(`/transactions/${id}`);
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(data));
     return;
   }
 
@@ -85,29 +56,47 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       customer: {
         name: string;
         email: string;
-        phone: string;
+        phone_number: string;
         document: string;
       };
     };
 
-    // Create PIX transaction via Banco BABYLON
-    const { status, data: txData } = await babylonPost("/transactions", {
+    // Fetch products to get offer_hash and product_hash
+    const productsData = await invictusGet("/products?per_page=1");
+    const product = productsData?.data?.[0];
+
+    if (!product) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Nenhum produto encontrado na conta InvictusPay." }));
+      return;
+    }
+
+    // Fetch offers for the product
+    const offersData = await invictusGet(`/products/${product.hash}/offers?per_page=1`);
+    const offer = offersData?.data?.[0];
+
+    const offerHash = offer?.hash ?? product.hash;
+    const productHash = product.hash;
+
+    // Create PIX transaction
+    const { status, data: txData } = await invictusPost("/transactions", {
       amount,
-      paymentMethod: "PIX",
-      customer: {
-        name: customer.name,
-        email: customer.email,
-        phone: customer.phone,
-        document: customer.document,
-      },
-      items: [
+      offer_hash: offerHash,
+      payment_method: "pix",
+      customer,
+      cart: [
         {
-          title: "Rifa Diego Faustini",
-          unitPrice: amount,
+          product_hash: productHash,
+          title: product.title ?? "Doação",
+          cover: null,
+          price: amount,
           quantity: 1,
+          operation_type: 1,
+          tangible: false,
         },
       ],
-      description: "Rifa Diego Faustini",
+      expire_in_days: 1,
+      transaction_origin: "api",
     });
 
     res.writeHead(status, { "Content-Type": "application/json" });

@@ -4,18 +4,12 @@ import path from "path";
 import { componentTagger } from "lovable-tagger";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-const BABYLON_SECRET_KEY = "sk_live_dqsFdUZ8AWn8m2vWxAgImUZQsXvDoEv8i94xoI7MwcyHykIX";
-const BABYLON_COMPANY_ID = "52bef000-0bb0-42b2-a455-793dc0bd95f4";
-const BABYLON_BASE = "https://api.bancobabylon.com/functions/v1";
+const INVICTUS_API_TOKEN = "TuvHpzBUr15I6Vd47MpA9Ukg8NbCZngMU5hqS2d7InPrwyF84R8zwpauaSBr";
+const INVICTUS_BASE = "https://api.invictuspay.app.br/api/public/v1";
 
-const DUTTYFY_ENCRYPTED_URL = "https://www.pagamentos-seguros.app/api-pix/ERaU_NVyY-LvawtJWDIhBoWRqoRyKZ-1zxYpl_TclE8F26Wv_pm8dCLxpzXLrsz1Q89aTg2RUqVxYKVhwQsitg";
-
-const BLACKCAT_BASE = "https://api.blackcatpay.com.br/api";
-const BLACKCAT_API_KEY = "sk_live_c349db83471321a9c6bafd5f8072a52cfdd90e4bd753b742de9072951fa15001";
-
-function babylonAuthHeader() {
-  const credentials = Buffer.from(`${BABYLON_SECRET_KEY}:${BABYLON_COMPANY_ID}`).toString("base64");
-  return `Basic ${credentials}`;
+function invictusUrl(path: string) {
+  const sep = path.includes("?") ? "&" : "?";
+  return `${INVICTUS_BASE}${path}${sep}api_token=${INVICTUS_API_TOKEN}`;
 }
 
 async function readBody(req: IncomingMessage): Promise<string> {
@@ -29,65 +23,49 @@ async function readBody(req: IncomingMessage): Promise<string> {
 
 async function localTransactionsHandler(req: IncomingMessage, res: ServerResponse) {
   res.setHeader("Content-Type", "application/json");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-
-  // GET /api/invictus/transactions?id=<uuid> — poll status
-  if (req.method === "GET") {
-    try {
-      const urlObj = new URL(req.url!, "http://localhost");
-      const id = urlObj.searchParams.get("id");
-      if (!id) {
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: "id required" }));
-        return;
-      }
-      const upstream = await fetch(`${BABYLON_BASE}/transactions/${id}`, {
-        headers: {
-          Authorization: babylonAuthHeader(),
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      });
-      const data = await upstream.json();
-      res.writeHead(upstream.status);
-      res.end(JSON.stringify(data));
-    } catch (err) {
-      console.error("[local-api] GET error:", err);
-      res.writeHead(500);
-      res.end(JSON.stringify({ error: "Erro ao consultar transação" }));
-    }
-    return;
-  }
-
-  // POST — create PIX transaction
   try {
     const raw = await readBody(req);
     const { amount, customer } = JSON.parse(raw);
 
-    const txRes = await fetch(`${BABYLON_BASE}/transactions`, {
+    const productsRes = await fetch(invictusUrl("/products?per_page=1"), {
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+    });
+    const productsData = await productsRes.json();
+    const product = productsData?.data?.[0];
+    if (!product) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ error: "Nenhum produto encontrado na conta InvictusPay." }));
+      return;
+    }
+
+    const offersRes = await fetch(invictusUrl(`/products/${product.hash}/offers?per_page=1`), {
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+    });
+    const offersData = await offersRes.json();
+    const offer = offersData?.data?.[0];
+    const offerHash = offer?.hash ?? product.hash;
+
+    const txRes = await fetch(invictusUrl("/transactions"), {
       method: "POST",
-      headers: {
-        Authorization: babylonAuthHeader(),
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({
         amount,
-        paymentMethod: "PIX",
-        customer: {
-          name: customer.name,
-          email: customer.email,
-          phone: customer.phone,
-          document: customer.document,
-        },
-        items: [
+        offer_hash: offerHash,
+        payment_method: "pix",
+        customer,
+        cart: [
           {
-            title: "Rifa Diego Faustino",
-            unitPrice: amount,
+            product_hash: product.hash,
+            title: product.title ?? "Doação",
+            cover: null,
+            price: amount,
             quantity: 1,
+            operation_type: 1,
+            tangible: false,
           },
         ],
-        description: "Rifa Diego Faustino",
+        expire_in_days: 1,
+        transaction_origin: "api",
       }),
     });
 
@@ -98,125 +76,6 @@ async function localTransactionsHandler(req: IncomingMessage, res: ServerRespons
     console.error("[local-api]", err);
     res.writeHead(500);
     res.end(JSON.stringify({ error: "Erro interno ao gerar PIX" }));
-  }
-}
-
-async function localDuttyfyHandler(req: IncomingMessage, res: ServerResponse) {
-  res.setHeader("Content-Type", "application/json");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-
-  if (req.method === "OPTIONS") {
-    res.writeHead(204);
-    res.end();
-    return;
-  }
-
-  // GET /api/duttyfy/transactions?transactionId=<id> — poll status
-  if (req.method === "GET") {
-    try {
-      const urlObj = new URL(req.url!, "http://localhost");
-      const transactionId = urlObj.searchParams.get("transactionId");
-      if (!transactionId) {
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: "transactionId required" }));
-        return;
-      }
-      const upstream = await fetch(`${DUTTYFY_ENCRYPTED_URL}?transactionId=${encodeURIComponent(transactionId)}`, {
-        headers: { "Content-Type": "application/json" },
-      });
-      const data = await upstream.json();
-      res.writeHead(upstream.status);
-      res.end(JSON.stringify(data));
-    } catch (err) {
-      console.error("[duttyfy-api] GET error:", err);
-      res.writeHead(500);
-      res.end(JSON.stringify({ error: "Erro ao consultar transação" }));
-    }
-    return;
-  }
-
-  // POST — create PIX charge
-  try {
-    const raw = await readBody(req);
-    const body = JSON.parse(raw);
-
-    const upstream = await fetch(DUTTYFY_ENCRYPTED_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    const txData = await upstream.json();
-    console.log("[duttyfy-api] POST status:", upstream.status, JSON.stringify(txData));
-    res.writeHead(upstream.status);
-    res.end(JSON.stringify(txData));
-  } catch (err) {
-    console.error("[duttyfy-api] POST error:", err);
-    res.writeHead(500);
-    res.end(JSON.stringify({ error: "Erro interno ao gerar PIX", detail: String(err) }));
-  }
-}
-
-// https://vitejs.dev/config/
-async function localBlackcatHandler(req: IncomingMessage, res: ServerResponse) {
-  res.setHeader("Content-Type", "application/json");
-  res.setHeader("Access-Control-Allow-Origin", "*");
-
-  if (req.method === "OPTIONS") {
-    res.writeHead(204);
-    res.end();
-    return;
-  }
-
-  // GET /api/blackcat/transactions?id=<transactionId> — poll status
-  if (req.method === "GET") {
-    try {
-      const urlObj = new URL(req.url!, "http://localhost");
-      const id = urlObj.searchParams.get("id");
-      if (!id) {
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: "id required" }));
-        return;
-      }
-      const upstream = await fetch(`${BLACKCAT_BASE}/sales/${encodeURIComponent(id)}/status`, {
-        headers: {
-          "X-API-Key": BLACKCAT_API_KEY,
-          "Content-Type": "application/json",
-        },
-      });
-      const data = await upstream.json();
-      res.writeHead(upstream.status);
-      res.end(JSON.stringify(data));
-    } catch (err) {
-      console.error("[blackcat-api] GET error:", err);
-      res.writeHead(500);
-      res.end(JSON.stringify({ error: "Erro ao consultar transação" }));
-    }
-    return;
-  }
-
-  // POST — create PIX sale
-  try {
-    const raw = await readBody(req);
-    const body = JSON.parse(raw);
-
-    const upstream = await fetch(`${BLACKCAT_BASE}/sales/create-sale`, {
-      method: "POST",
-      headers: {
-        "X-API-Key": BLACKCAT_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    const txData = await upstream.json();
-    console.log("[blackcat-api] POST status:", upstream.status, JSON.stringify(txData));
-    res.writeHead(upstream.status);
-    res.end(JSON.stringify(txData));
-  } catch (err) {
-    console.error("[blackcat-api] POST error:", err);
-    res.writeHead(500);
-    res.end(JSON.stringify({ error: "Erro interno ao gerar PIX", detail: String(err) }));
   }
 }
 
@@ -236,32 +95,8 @@ export default defineConfig(({ mode }) => ({
       name: "local-invictus-api",
       configureServer(server) {
         server.middlewares.use("/api/invictus/transactions", (req, res, next) => {
-          if (req.method === "POST" || req.method === "GET") {
+          if (req.method === "POST") {
             localTransactionsHandler(req, res);
-          } else {
-            next();
-          }
-        });
-      },
-    },
-    {
-      name: "local-duttyfy-api",
-      configureServer(server) {
-        server.middlewares.use("/api/duttyfy/transactions", (req, res, next) => {
-          if (req.method === "POST" || req.method === "GET" || req.method === "OPTIONS") {
-            localDuttyfyHandler(req, res);
-          } else {
-            next();
-          }
-        });
-      },
-    },
-    {
-      name: "local-blackcat-api",
-      configureServer(server) {
-        server.middlewares.use("/api/blackcat/transactions", (req, res, next) => {
-          if (req.method === "POST" || req.method === "GET" || req.method === "OPTIONS") {
-            localBlackcatHandler(req, res);
           } else {
             next();
           }
