@@ -2,91 +2,193 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
-  :root {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 100%;
-
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 100%;
-
-    --primary: 45 100% 50%;
-    --primary-foreground: 0 0% 0%;
-
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 70%;
-
-    --accent: 45 100% 50%;
-    --accent-foreground: 0 0% 0%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 45 100% 50%;
-
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-
-    --card: 0 0% 5%;
-    --card-foreground: 0 0% 100%;
-
-    --popover: 0 0% 5%;
-    --popover-foreground: 0 0% 100%;
-
-    --primary: 45 100% 50%;
-    --primary-foreground: 0 0% 0%;
-
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 70%;
-
-    --accent: 45 100% 50%;
-    --accent-foreground: 0 0% 0%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 45 100% 50%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
   body {
-    @apply bg-background text-foreground;
+    font-family: 'Source Sans 3', sans-serif;
+    background-color: #f2f2f2;
+  }
+  body.gov-body {
+    font-family: 'Rawline', 'Source Sans 3', sans-serif;
+    background-color: white;
+    color: #333;
+    margin: 0;
+    padding: 0;
   }
 }
 
-/* Font imports */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Slab:wght@300;400;500;700&display=swap');
-
-.font-roboto {
-  font-family: 'Roboto', sans-serif;
+@layer components {
+  .container-gov {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .gov-header {
+    background: white;
+    border-bottom: 1px solid #efefef;
+    padding: 15px 0;
+  }
+  .breadcrumb {
+    padding: 15px 0;
+    font-size: 13px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .label-processo {
+    color: #004587;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .headline {
+    font-size: 38px;
+    line-height: 1.1;
+    font-weight: 900;
+    color: #004587;
+    margin-bottom: 15px;
+  }
+  @media (max-width: 768px) {
+    .headline {
+      font-size: 24px;
+    }
+  }
+  .footer-gov-v2 {
+    background-color: #071d41;
+    color: white;
+    padding: 40px 0 20px;
+    margin-top: 60px;
+    width: 100%;
+    box-sizing: border-box;
+    clear: both;
+  }
+  .gov-logo-footer img {
+    height: 48px;
+    width: auto;
+    margin-bottom: 40px;
+    filter: brightness(0) invert(1);
+  }
+  .footer-item {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 15px 0;
+  }
+  .footer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+  }
+  .chevron {
+    height: 12px;
+    filter: brightness(0) invert(1);
+    transition: transform 0.3s;
+  }
+  .footer-item.active .chevron {
+    transform: rotate(180deg);
+  }
+  .footer-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 40px 0 20px;
+  }
+  .footer-copyright {
+    text-align: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.6;
+  }
 }
 
-.font-roboto-slab {
-  font-family: 'Roboto Slab', serif;
+@layer components {
+  .article-category {
+    @apply text-g1red font-bold text-[13px] uppercase mb-2.5 tracking-wider;
+  }
+  .article-title {
+    font-family: 'Merriweather', serif;
+    @apply text-[36px] leading-[1.25] font-bold text-[#1a1a1a] mb-5;
+  }
+  .article-subtitle {
+    @apply text-xl text-[#555] mb-5 leading-[1.5];
+  }
+  .article-meta {
+    @apply text-[13px] text-[#999] border-b border-[#eee] pb-5 mb-[30px] flex gap-4 flex-wrap;
+  }
+  .featured-image {
+    height: 380px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #533483 100%);
+    @apply w-full rounded-md mb-2.5 flex items-center justify-center relative overflow-hidden;
+  }
+  .featured-image::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 50%, rgba(83, 52, 131, 0.5) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 50%, rgba(15, 52, 96, 0.5) 0%, transparent 60%);
+  }
+  .globe-icon {
+    @apply text-[80px] mb-[15px] block;
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+  }
+  .image-caption {
+    @apply text-[13px] text-[#888] mb-[30px] leading-[1.5];
+  }
+  .article-content p {
+    @apply text-[18px] leading-[1.7] text-[#333] mb-[22px];
+  }
+  .article-content h2 {
+    font-family: 'Merriweather', serif;
+    @apply text-[26px] font-bold text-[#1a1a1a] mt-10 mb-[18px] border-l-4 border-g1red pl-[14px];
+  }
+  .highlight-box {
+    @apply bg-[#fff8f8] border-l-4 border-g1red px-5 py-[18px] my-7 text-base text-[#333] rounded-r;
+  }
+  .cta-button {
+    @apply block bg-g1red text-white px-10 py-5 text-xl font-bold rounded-md uppercase no-underline text-center w-full tracking-wider transition-all;
+  }
+  .cta-button:hover {
+    @apply bg-g1redDark -translate-y-0.5;
+  }
+  .location-highlight {
+    @apply font-bold text-g1red;
+  }
+  .destination-list {
+    @apply list-none p-0 mb-6 grid grid-cols-2 gap-3;
+  }
+  .destination-list li {
+    @apply bg-[#f8f8f8] border border-[#eee] rounded-md px-4 py-[14px] text-base flex items-start gap-2.5;
+  }
+  .destination-list li .flag {
+    @apply text-2xl leading-none flex-shrink-0;
+  }
+  .steps-list {
+    @apply list-none p-0 mb-6;
+    counter-reset: steps;
+  }
+  .steps-list li {
+    counter-increment: steps;
+    @apply flex gap-[14px] items-start mb-[14px] text-[17px] text-[#333];
+  }
+  .steps-list li::before {
+    content: counter(steps);
+    @apply bg-g1red text-white font-bold text-sm w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-px;
+  }
+  .divider {
+    @apply border-0 border-t border-[#eee] my-9;
+  }
+
+  @media (max-width: 640px) {
+    .article-title {
+      @apply text-[26px];
+    }
+    .destination-list {
+      @apply grid-cols-1;
+    }
+  }
 }
